@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import axios from "axios";
+import { API_BASE_URL } from "@/lib/api";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 
@@ -50,10 +51,10 @@ export default function AdminOrdersPage() {
 
   const fetchData = async () => {
     try {
-      const ordersRes = await axios.get(`${process.env.NEXT_PUBLIC_API_URL || 'https://nuvita.uz/api'}/order/admin`);
+      const ordersRes = await axios.get(`${API_BASE_URL}/order/admin`);
       setOrders(ordersRes.data);
 
-      const staffRes = await axios.get(`${process.env.NEXT_PUBLIC_API_URL || 'https://nuvita.uz/api'}/admin/staff`);
+      const staffRes = await axios.get(`${API_BASE_URL}/admin/staff`);
       const courierList = staffRes.data.filter((s: Staff) => s.role === "COURIER");
       setCouriers(courierList);
     } catch (err: any) {
@@ -76,7 +77,7 @@ export default function AdminOrdersPage() {
 
   const handleUpdateStatus = async (orderId: string, status: string, courierId?: number) => {
     try {
-      await axios.patch(`${process.env.NEXT_PUBLIC_API_URL || 'https://nuvita.uz/api'}/order/admin/${orderId}`, {       
+      await axios.patch(`${API_BASE_URL}/order/admin/${orderId}`, {       
         orderStatus: status,
         courierUserId: courierId
       });
@@ -219,7 +220,7 @@ export default function AdminOrdersPage() {
                      <div key={idx} className="flex items-center gap-4 bg-white p-3 rounded border shadow-sm">
                         {item.photoUrl ? (
                            <Image 
-                             src={`${process.env.NEXT_PUBLIC_API_URL || 'https://nuvita.uz/api'}${imgUrl}`} 
+                             src={`${API_BASE_URL}${imgUrl}`} 
                              alt={item.name} 
                              width={60} 
                              height={60} 

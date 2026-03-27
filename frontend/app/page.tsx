@@ -3,6 +3,7 @@
 
 import { useEffect, useState, Suspense } from "react";
 import axios from "axios";
+import { API_BASE_URL } from "@/lib/api";
 import { ShoppingCart, Plus, Minus } from "lucide-react";
 import { useSearchParams } from "next/navigation";
 
@@ -35,7 +36,7 @@ function ProductList() {
     const token = localStorage.getItem("accessToken");
     if (!token) return;
     try {
-      const res = await axios.get(`${process.env.NEXT_PUBLIC_API_URL || 'https://nuvita.uz/api'}/cart`, {
+      const res = await axios.get(`${API_BASE_URL}/cart`, {
         headers: { Authorization: "Bearer " + token }
       });
       if (res.data && res.data.items) {
@@ -51,7 +52,7 @@ function ProductList() {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const prodRes = await axios.get(`${process.env.NEXT_PUBLIC_API_URL || 'https://nuvita.uz/api'}/admin/product`);
+        const prodRes = await axios.get(`${API_BASE_URL}/admin/product`);
         const activeProducts = prodRes.data.filter((p: any) => p.active !== false);
         setProducts(activeProducts);
       } catch (err) {
@@ -75,7 +76,7 @@ function ProductList() {
 
     try {
       await axios.post(
-        `${process.env.NEXT_PUBLIC_API_URL || 'https://nuvita.uz/api'}/cart/add`,
+        `${API_BASE_URL}/cart/add`,
         { productId, productCount: 1 },
         { headers: { Authorization: "Bearer " + token } }
       );
@@ -96,7 +97,7 @@ function ProductList() {
     const token = localStorage.getItem("accessToken");
     if (!token) return;
     try {
-      await axios.patch(`${process.env.NEXT_PUBLIC_API_URL || 'https://nuvita.uz/api'}/cart/item/` + cartItemId, { action }, {
+      await axios.patch(`${API_BASE_URL}/cart/item/` + cartItemId, { action }, {
         headers: { Authorization: "Bearer " + token }
       });
       fetchCartOptions();
@@ -133,7 +134,7 @@ function ProductList() {
                 <div key={p.id} className="bg-white rounded-3xl overflow-hidden hover:shadow-2xl transition-all duration-300 border border-gray-100 group flex flex-col h-full">
                   <div className="relative h-60 overflow-hidden bg-gray-100">
                     {p.photoUrl ? (
-                      <img src={`${process.env.NEXT_PUBLIC_API_URL || 'https://nuvita.uz/api'}` + p.photoUrl} alt={p.name} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
+                      <img src={`${API_BASE_URL}` + p.photoUrl} alt={p.name} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
                     ) : (
                       <div className="w-full h-full flex items-center justify-center text-gray-400 font-medium">Rasm yo'q</div>
                     )}

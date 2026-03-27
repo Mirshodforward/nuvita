@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import axios from "axios";
+import { API_BASE_URL } from "@/lib/api";
 
 export default function AdminSettings() {
   const [deliverySumm, setDeliverySumm] = useState<number>(30000);
@@ -15,7 +16,7 @@ export default function AdminSettings() {
   const fetchSettings = async () => {
     try {
       const token = localStorage.getItem("accessToken");
-      const res = await axios.get(`${process.env.NEXT_PUBLIC_API_URL || 'https://nuvita.uz/api'}/admin/settings`, {
+      const res = await axios.get(`${API_BASE_URL}/admin/settings`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       if (res.data && res.data.deliverySumm) {
@@ -32,7 +33,7 @@ export default function AdminSettings() {
     setSuccess(false);
     try {
       const token = localStorage.getItem("accessToken");
-      await axios.post(`${process.env.NEXT_PUBLIC_API_URL || 'https://nuvita.uz/api'}/admin/settings`, 
+      await axios.post(`${API_BASE_URL}/admin/settings`, 
         { deliverySumm: Number(deliverySumm) },
         { headers: { Authorization: `Bearer ${token}` } }
       );

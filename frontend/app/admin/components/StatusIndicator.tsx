@@ -1,5 +1,7 @@
 "use client";
 
+import { API_BASE_URL } from "@/lib/api";
+
 import { useState, useEffect } from "react";
 import { Wifi, WifiOff, Database, Loader2 } from "lucide-react";
 
@@ -21,7 +23,7 @@ export default function StatusIndicator() {
     setLoading(true);
     try {
       const res = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL || "https://nuvita.uz/api"}/health`,
+        `${API_BASE_URL}/health`,
         { cache: "no-store" }
       );
       if (res.ok) {

@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import axios from "axios";
+import { API_BASE_URL } from "@/lib/api";
 
 export default function LoginPage() {
   const [phone, setPhone] = useState("+998");
@@ -28,7 +29,7 @@ export default function LoginPage() {
     setLoading(true);
     try {
       // call backend to check if user exists
-      const res = await axios.post(`${process.env.NEXT_PUBLIC_API_URL || 'https://nuvita.uz/api'}/auth/check-phone`, { number: cleanPhone });
+      const res = await axios.post(`${API_BASE_URL}/auth/check-phone`, { number: cleanPhone });
       if (res.data.exists) {
         setStep("password");
       } else {
@@ -49,7 +50,7 @@ export default function LoginPage() {
 
     try {
       const cleanPhone = phone.replace(/\s+/g, "");
-      const res = await axios.post(`${process.env.NEXT_PUBLIC_API_URL || 'https://nuvita.uz/api'}/auth/login`, { number: cleanPhone, password });
+      const res = await axios.post(`${API_BASE_URL}/auth/login`, { number: cleanPhone, password });
       
       // Save token
       // Cookies.set('token', res.data.token), localStorage, etc.

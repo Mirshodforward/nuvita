@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import axios from "axios";
+import { API_BASE_URL } from "@/lib/api";
 import { useParams, useRouter } from "next/navigation";
 import { ArrowLeft, ShoppingCart, Info, List, CheckCircle2 } from "lucide-react";
 
@@ -28,7 +29,7 @@ export default function ProductDetailsPage() {
     const fetchProduct = async () => {
       try {
         const decodedName = decodeURIComponent(productName as string);
-        const res = await axios.get(`${process.env.NEXT_PUBLIC_API_URL || 'https://nuvita.uz/api'}/admin/product`);
+        const res = await axios.get(`${API_BASE_URL}/admin/product`);
         const found = res.data.find((p: Product) => p.name === decodedName && p.active !== false);
         setProduct(found || null);
       } catch (err) {
@@ -53,7 +54,7 @@ export default function ProductDetailsPage() {
 
     try {
       await axios.post(
-        `${process.env.NEXT_PUBLIC_API_URL || 'https://nuvita.uz/api'}/cart/add`,
+        `${API_BASE_URL}/cart/add`,
         { productId, productCount: 1 },
         { headers: { Authorization: `Bearer ${token}` } }
       );
@@ -109,7 +110,7 @@ export default function ProductDetailsPage() {
             <div className="lg:w-1/2 bg-gray-100 p-8 flex items-center justify-center relative min-h-[300px] lg:min-h-[500px]">
               {product.photoUrl ? (
                 <img 
-                  src={`${process.env.NEXT_PUBLIC_API_URL || 'https://nuvita.uz/api'}${product.photoUrl}`} 
+                  src={`${API_BASE_URL}${product.photoUrl}`} 
                   alt={product.name} 
                   className="w-full max-w-md h-auto object-contain drop-shadow-2xl rounded-2xl hover:scale-105 transition-transform duration-500" 
                 />

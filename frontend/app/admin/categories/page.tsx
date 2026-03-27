@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import axios from "axios";
+import { API_BASE_URL } from "@/lib/api";
 
 interface Category {
   id: number;
@@ -24,7 +25,7 @@ export default function CategoriesPage() {
   const fetchCategories = async () => {
     try {
       setLoading(true);
-      const res = await axios.get(`${process.env.NEXT_PUBLIC_API_URL || 'https://nuvita.uz/api'}/admin/category`);
+      const res = await axios.get(`${API_BASE_URL}/admin/category`);
       setCategories(res.data);
     } catch (error) {
       console.error(error);
@@ -62,12 +63,12 @@ export default function CategoriesPage() {
     e.preventDefault();
     try {
       if (editingId) {
-        await axios.patch(`${process.env.NEXT_PUBLIC_API_URL || 'https://nuvita.uz/api'}/admin/category/${editingId}`, {
+        await axios.patch(`${API_BASE_URL}/admin/category/${editingId}`, {
           name,
           description,
         });
       } else {
-        await axios.post(`${process.env.NEXT_PUBLIC_API_URL || 'https://nuvita.uz/api'}/admin/category`, {
+        await axios.post(`${API_BASE_URL}/admin/category`, {
           name,
           description,
         });
@@ -81,7 +82,7 @@ export default function CategoriesPage() {
 
   const toggleStatus = async (id: number, currentStatus: boolean) => {
     try {
-      await axios.patch(`${process.env.NEXT_PUBLIC_API_URL || 'https://nuvita.uz/api'}/admin/category/${id}`, {
+      await axios.patch(`${API_BASE_URL}/admin/category/${id}`, {
         isActive: !currentStatus,
       });
       fetchCategories();
@@ -93,7 +94,7 @@ export default function CategoriesPage() {
   const deleteCategory = async (id: number) => {
     if (!confirm("Haqiqatan ham o'chirmoqchimisiz?")) return;
     try {
-      await axios.delete(`${process.env.NEXT_PUBLIC_API_URL || 'https://nuvita.uz/api'}/admin/category/${id}`);
+      await axios.delete(`${API_BASE_URL}/admin/category/${id}`);
       fetchCategories();
     } catch (error) {
       alert("O'chirishda xatolik");

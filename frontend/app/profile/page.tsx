@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState } from "react";
 import axios from "axios";
+import { API_BASE_URL } from "@/lib/api";
 import { useRouter } from "next/navigation";
 import { 
   UserCircle, 
@@ -80,8 +81,8 @@ export default function ProfilePage() {
     try {
       setLoading(true);
       const [profileRes, ordersRes] = await Promise.all([
-        axios.get(`${process.env.NEXT_PUBLIC_API_URL || 'https://nuvita.uz/api'}/user/me`, { headers: { Authorization: `Bearer ${t}` } }),
-        axios.get(`${process.env.NEXT_PUBLIC_API_URL || 'https://nuvita.uz/api'}/order/me`, { headers: { Authorization: `Bearer ${t}` } })
+        axios.get(`${API_BASE_URL}/user/me`, { headers: { Authorization: `Bearer ${t}` } }),
+        axios.get(`${API_BASE_URL}/order/me`, { headers: { Authorization: `Bearer ${t}` } })
       ]);
       setProfile(profileRes.data);
       setFormData(profileRes.data);
@@ -99,7 +100,7 @@ export default function ProfilePage() {
 
   const handleUpdate = async (updateData: Partial<UserProfile>, showSuccess = true) => {
     try {
-      await axios.patch(`${process.env.NEXT_PUBLIC_API_URL || 'https://nuvita.uz/api'}/user/me`, updateData, {
+      await axios.patch(`${API_BASE_URL}/user/me`, updateData, {
         headers: { Authorization: `Bearer ${token}` }
       });
       setProfile(prev => ({ ...prev, ...updateData } as UserProfile));
@@ -393,7 +394,7 @@ export default function ProfilePage() {
                           {order.productItems?.map((item, idx) => (
                             <div key={idx} className="flex items-center gap-2 bg-gray-50 rounded-lg pr-3 pl-1 py-1 border border-gray-100">
                               {item.photoUrl ? (
-                                <img src={item.photoUrl.startsWith('/') ? `${process.env.NEXT_PUBLIC_API_URL || 'https://nuvita.uz/api'}${item.photoUrl}` : `${process.env.NEXT_PUBLIC_API_URL || 'https://nuvita.uz/api'}/ProductPhoto/${item.photoUrl}`} alt="p" className="w-8 h-8 rounded object-cover" />
+                                <img src={item.photoUrl.startsWith('/') ? `${API_BASE_URL}${item.photoUrl}` : `${API_BASE_URL}/ProductPhoto/${item.photoUrl}`} alt="p" className="w-8 h-8 rounded object-cover" />
                               ) : (
                                 <div className="w-8 h-8 rounded bg-gray-200 flex items-center justify-center text-xs"><Package size={14} className="text-gray-400"/></div>
                               )}

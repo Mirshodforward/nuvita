@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import axios from "axios";
+import { API_BASE_URL } from "@/lib/api";
 
 interface Staff {
   id: number;
@@ -31,7 +32,7 @@ export default function StaffPage() {
 
   const fetchStaff = async () => {
     try {
-      const res = await axios.get(`${process.env.NEXT_PUBLIC_API_URL || 'https://nuvita.uz/api'}/admin/staff`);
+      const res = await axios.get(`${API_BASE_URL}/admin/staff`);
       setStaffList(res.data);
     } catch (err: any) {
       console.error(err);
@@ -48,7 +49,7 @@ export default function StaffPage() {
 
     try {
       await axios.post(
-        `${process.env.NEXT_PUBLIC_API_URL || 'https://nuvita.uz/api'}/admin/staff`,
+        `${API_BASE_URL}/admin/staff`,
         { fullName, number, role }
       );
 

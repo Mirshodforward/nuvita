@@ -3,6 +3,7 @@
 
 import { useEffect, useState } from "react";
 import axios from "axios";
+import { API_BASE_URL } from "@/lib/api";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Trash2, Plus, Minus, ArrowRight, ShoppingBag } from "lucide-react";
@@ -46,7 +47,7 @@ export default function CartPage() {
 
   const fetchCart = async (t: string) => {
     try {
-      const res = await axios.get(`${process.env.NEXT_PUBLIC_API_URL || 'https://nuvita.uz/api'}/cart`, {
+      const res = await axios.get(`${API_BASE_URL}/cart`, {
         headers: { Authorization: "Bearer " + t }
       });
       setCart(res.data);
@@ -59,7 +60,7 @@ export default function CartPage() {
 
   const updateItem = async (id: number, action: "increment" | "decrement") => {
     try {
-      const res = await axios.patch(`${process.env.NEXT_PUBLIC_API_URL || 'https://nuvita.uz/api'}/cart/item/` + id, { action }, {
+      const res = await axios.patch(`${API_BASE_URL}/cart/item/` + id, { action }, {
         headers: { Authorization: "Bearer " + token }
       });
       setCart(res.data);
@@ -70,7 +71,7 @@ export default function CartPage() {
 
   const removeItem = async (id: number) => {
     try {
-      const res = await axios.delete(`${process.env.NEXT_PUBLIC_API_URL || 'https://nuvita.uz/api'}/cart/item/` + id, {
+      const res = await axios.delete(`${API_BASE_URL}/cart/item/` + id, {
         headers: { Authorization: "Bearer " + token }
       });
       setCart(res.data);
@@ -82,7 +83,7 @@ export default function CartPage() {
   const clearCart = async () => {
     if (confirm("Savatni tozalashni tasdiqlaysizmi?")) {
       try {
-        const res = await axios.delete(`${process.env.NEXT_PUBLIC_API_URL || 'https://nuvita.uz/api'}/cart/clear`, {
+        const res = await axios.delete(`${API_BASE_URL}/cart/clear`, {
           headers: { Authorization: "Bearer " + token }
         });
         setCart(res.data);
@@ -140,7 +141,7 @@ export default function CartPage() {
                     <li key={item.id} className="p-6 flex items-center gap-6 hover:bg-gray-50/50 transition">
                       <div className="w-20 h-20 rounded-2xl overflow-hidden bg-gray-100 shrink-0 border border-gray-50">
                         {item.product.photoUrl ? (
-                          <img src={`${process.env.NEXT_PUBLIC_API_URL || 'https://nuvita.uz/api'}` + item.product.photoUrl} className="w-full h-full object-cover" alt={item.product.name} />
+                          <img src={`${API_BASE_URL}` + item.product.photoUrl} className="w-full h-full object-cover" alt={item.product.name} />
                         ) : (
                           <div className="w-full h-full flex justify-center items-center text-xs text-gray-400">Rasm yo`q</div>
                         )}

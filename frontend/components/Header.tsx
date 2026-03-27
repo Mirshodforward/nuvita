@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import axios from 'axios';
+import { API_BASE_URL } from "@/lib/api";
 import { useRouter, usePathname, useSearchParams } from 'next/navigation';
 import { UserCircle, ShoppingCart, Search } from 'lucide-react';
 
@@ -24,7 +25,7 @@ export function Header() {
 
   const fetchProfile = async (t: string) => {
     try {
-      const res = await axios.get(`${process.env.NEXT_PUBLIC_API_URL || 'https://nuvita.uz/api'}/user/me`, {
+      const res = await axios.get(`${API_BASE_URL}/user/me`, {
         headers: { Authorization: `Bearer ${t}` }
       });
       setProfile(res.data);
@@ -39,7 +40,7 @@ export function Header() {
 
   const fetchCart = async (t: string) => {
     try {
-      const res = await axios.get(`${process.env.NEXT_PUBLIC_API_URL || 'https://nuvita.uz/api'}/cart`, {
+      const res = await axios.get(`${API_BASE_URL}/cart`, {
         headers: { Authorization: `Bearer ${t}` }
       });
       setCartCount(res.data.count || 0);

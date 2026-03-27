@@ -3,6 +3,7 @@
 
 import { useState, useEffect } from "react";
 import axios from "axios";
+import { API_BASE_URL } from "@/lib/api";
 import { useRouter } from "next/navigation";
 import { MapPin, User, Phone, CheckCircle, CreditCard, ChevronLeft } from "lucide-react";
 import Link from "next/link";
@@ -47,9 +48,9 @@ export default function CheckoutPage() {
     const fetchData = async () => {
       try {
         const [profRes, cartRes, settRes] = await Promise.all([
-          axios.get(`${process.env.NEXT_PUBLIC_API_URL || 'https://nuvita.uz/api'}/auth/profile`, { headers: { Authorization: "Bearer " + token } }),
-          axios.get(`${process.env.NEXT_PUBLIC_API_URL || 'https://nuvita.uz/api'}/cart`, { headers: { Authorization: "Bearer " + token } }),
-          axios.get(`${process.env.NEXT_PUBLIC_API_URL || 'https://nuvita.uz/api'}/admin/settings`)
+          axios.get(`${API_BASE_URL}/auth/profile`, { headers: { Authorization: "Bearer " + token } }),
+          axios.get(`${API_BASE_URL}/cart`, { headers: { Authorization: "Bearer " + token } }),
+          axios.get(`${API_BASE_URL}/admin/settings`)
         ]);
 
         const p = profRes.data;
@@ -86,7 +87,7 @@ export default function CheckoutPage() {
     setSubmitting(true);
     const token = localStorage.getItem("accessToken");
     try {
-      await axios.post(`${process.env.NEXT_PUBLIC_API_URL || 'https://nuvita.uz/api'}/order`, {
+      await axios.post(`${API_BASE_URL}/order`, {
         deliveryAddress: `${formData.region}, ${formData.district}, ${formData.address}`,
         contactNumber: formData.contactNumber,
         paymentType: formData.paymentType,

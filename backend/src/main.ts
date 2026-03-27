@@ -3,24 +3,34 @@ import { AppModule } from './app.module';
 import { NestExpressApplication } from '@nestjs/platform-express';
 import { join } from 'path';
 
+const DEFAULT_ALLOWED_ORIGINS = [
+  'http://localhost:3000',
+  'https://nuvita.uz',
+  'https://www.nuvita.uz',
+];
+
+function getAllowedOrigins() {
+  const configuredOrigins = process.env.FRONTEND_ORIGINS?.split(',')
+    .map((origin) => origin.trim())
+    .filter(Boolean);
+
+  return configuredOrigins?.length ? configuredOrigins : DEFAULT_ALLOWED_ORIGINS;
+}
+
 async function bootstrap() {
-  // O'zbekiston/Toshkent vaqt mintaqasini o'rnatish
   process.env.TZ = 'Asia/Tashkent';
 
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
 
-  // Static fayllarni (masalan, rasmlarni) ochiq qilish '/uploads' url orqali
   app.useStaticAssets(join(__dirname, '..', 'ProductPhoto'), {
     prefix: '/ProductPhoto/',
   });
 
-  // CORS qismiga ruxsat berish
   app.enableCors({
-    origin: ['http://localhost:3000', 'https://nuvita.uz', 'https://www.nuvita.uz'], // frontend
+    origin: getAllowedOrigins(),
     credentials: true,
   });
 
-  // Global API prefix qo'shish
   app.setGlobalPrefix('api');
 
   await app.listen(process.env.PORT ?? 3001);

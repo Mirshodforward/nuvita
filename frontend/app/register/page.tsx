@@ -3,6 +3,7 @@
 import { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import axios from "axios";
+import { API_BASE_URL } from "@/lib/api";
 
 function RegisterForm() {
   const [phone, setPhone] = useState("+998");
@@ -37,7 +38,7 @@ function RegisterForm() {
 
     try {
       const cleanPhone = phone.replace(/\s+/g, "");
-      const res = await axios.post(`${process.env.NEXT_PUBLIC_API_URL || 'https://nuvita.uz/api'}/auth/register`, {
+      const res = await axios.post(`${API_BASE_URL}/auth/register`, {
         number: cleanPhone,
         password,
         telegramId: searchParams.get("telegramId"),

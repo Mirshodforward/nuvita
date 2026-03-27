@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import axios from "axios";
+import { API_BASE_URL } from "@/lib/api";
 import { useRouter } from "next/navigation";
 import { Header } from "../../components/Header";
 import { Footer } from "../../components/Footer";
@@ -43,7 +44,7 @@ export default function MyOrdersPage() {
         return;
       }
       
-      const res = await axios.get(`${process.env.NEXT_PUBLIC_API_URL || 'https://nuvita.uz/api'}/order/me`, {
+      const res = await axios.get(`${API_BASE_URL}/order/me`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       setOrders(res.data);

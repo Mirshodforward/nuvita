@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useRef } from "react";
 import axios from "axios";
+import { API_BASE_URL } from "@/lib/api";
 
 interface Category {
   id: number;
@@ -45,7 +46,7 @@ export default function ProductsPage() {
   const fetchProducts = async () => {
     try {
       setLoading(true);
-      const res = await axios.get(`${process.env.NEXT_PUBLIC_API_URL || 'https://nuvita.uz/api'}/admin/product`);
+      const res = await axios.get(`${API_BASE_URL}/admin/product`);
       setProducts(res.data);
     } catch (error) {
       console.error(error);
@@ -57,7 +58,7 @@ export default function ProductsPage() {
 
   const fetchCategories = async () => {
     try {
-      const res = await axios.get(`${process.env.NEXT_PUBLIC_API_URL || 'https://nuvita.uz/api'}/admin/category`);
+      const res = await axios.get(`${API_BASE_URL}/admin/category`);
       // filter only active ones for form if needed, or show all
       setCategories(res.data.filter((c: any) => c.isActive));
     } catch (error) {
@@ -123,11 +124,11 @@ export default function ProductsPage() {
       }
 
       if (editingId) {
-        await axios.patch(`${process.env.NEXT_PUBLIC_API_URL || 'https://nuvita.uz/api'}/admin/product/${editingId}`, formData, {
+        await axios.patch(`${API_BASE_URL}/admin/product/${editingId}`, formData, {
           headers: { "Content-Type": "multipart/form-data" }
         });
       } else {
-        await axios.post(`${process.env.NEXT_PUBLIC_API_URL || 'https://nuvita.uz/api'}/admin/product`, formData, {
+        await axios.post(`${API_BASE_URL}/admin/product`, formData, {
           headers: { "Content-Type": "multipart/form-data" }
         });
       }
@@ -140,7 +141,7 @@ export default function ProductsPage() {
 
   const toggleStatus = async (id: number, currentStatus: boolean) => {
     try {
-      await axios.patch(`${process.env.NEXT_PUBLIC_API_URL || 'https://nuvita.uz/api'}/admin/product/${id}`, {
+      await axios.patch(`${API_BASE_URL}/admin/product/${id}`, {
         isActive: !currentStatus,
       });
       fetchProducts();
@@ -152,7 +153,7 @@ export default function ProductsPage() {
   const deleteProduct = async (id: number) => {
     if (!confirm("Haqiqatan ham o'chirmoqchimisiz?")) return;
     try {
-      await axios.delete(`${process.env.NEXT_PUBLIC_API_URL || 'https://nuvita.uz/api'}/admin/product/${id}`);
+      await axios.delete(`${API_BASE_URL}/admin/product/${id}`);
       fetchProducts();
     } catch (error) {
       alert("O'chirishda xatolik");
@@ -196,7 +197,7 @@ export default function ProductsPage() {
               <tr key={prod.id}>
                 <td className="px-6 py-4 whitespace-nowrap">
                    {prod.photoUrl ? (
-                     <img src={`${process.env.NEXT_PUBLIC_API_URL || 'https://nuvita.uz/api'}${prod.photoUrl}`} alt={prod.name} className="h-12 w-12 rounded-md object-cover border" />
+                     <img src={`${API_BASE_URL}${prod.photoUrl}`} alt={prod.name} className="h-12 w-12 rounded-md object-cover border" />
                    ) : (
                      <div className="h-12 w-12 rounded-md bg-gray-200 flex items-center justify-center text-gray-400 text-xs">Yo'q</div>
                    )}
