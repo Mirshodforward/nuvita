@@ -4,6 +4,7 @@ import Link from "next/link";
 import { ReactNode, useState, useEffect } from "react";
 import { Menu, X, LayoutDashboard, ListTree, Package, ShoppingCart, Users, Settings } from "lucide-react";
 import { usePathname } from "next/navigation";
+import StatusIndicator from "./components/StatusIndicator";
 
 export default function AdminLayout({ children }: { children: ReactNode }) {    
   const [isOpen, setIsOpen] = useState(false);
@@ -53,7 +54,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
 
       {/* Sidebar as Drawer on Mobile */}
       <aside
-        className={`fixed inset-y-0 left-0 bg-white border-r w-[280px] z-50 transform transition-transform duration-300 ease-[cubic-bezier(0.4,0,0.2,1)] md:static md:translate-x-0 ${isOpen ? "translate-x-0 shadow-2xl" : "-translate-x-full"}`}
+        className={`fixed inset-y-0 left-0 bg-white border-r w-[280px] z-50 transform transition-transform duration-300 ease-[cubic-bezier(0.4,0,0.2,1)] md:static md:translate-x-0 flex flex-col ${isOpen ? "translate-x-0 shadow-2xl" : "-translate-x-full"}`}
       >
         <div className="p-6 flex justify-between items-center h-16 md:h-20 border-b md:border-b-0 md:flex">
           <h2 className="text-2xl font-bold text-gray-800">Admin Panel</h2>     
@@ -62,7 +63,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
           </button>
         </div>
 
-        <nav className="mt-2 md:mt-4 flex flex-col px-3 gap-1 overflow-y-auto pb-6">
+        <nav className="mt-2 md:mt-4 flex flex-col px-3 gap-1 overflow-y-auto pb-6 flex-1">
           {navItems.map((item) => {
             const isActive = pathname === item.href;
             const Icon = item.icon;
@@ -78,6 +79,11 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
             );
           })}
         </nav>
+
+        {/* Status Indicator */}
+        <div className="px-3 pb-4 mt-auto">
+          <StatusIndicator />
+        </div>
       </aside>
 
       {/* Main Content Area */}
