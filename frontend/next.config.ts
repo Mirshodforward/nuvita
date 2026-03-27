@@ -2,7 +2,7 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   images: {
-    domains: ["localhost", "127.0.0.1"],
+    domains: ["localhost", "127.0.0.1", "nuvita.uz", "www.nuvita.uz"],
     remotePatterns: [
       {
         protocol: "http",
@@ -14,6 +14,16 @@ const nextConfig: NextConfig = {
         protocol: "http",
         hostname: "127.0.0.1",
         port: "3001",
+        pathname: "/**",
+      },
+      {
+        protocol: "https",
+        hostname: "nuvita.uz",
+        pathname: "/**",
+      },
+      {
+        protocol: "https",
+        hostname: "www.nuvita.uz",
         pathname: "/**",
       }
     ],

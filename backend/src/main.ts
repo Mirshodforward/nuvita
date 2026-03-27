@@ -19,6 +19,10 @@ async function bootstrap() {
     origin: ['http://localhost:3000', 'https://nuvita.uz', 'https://www.nuvita.uz'], // frontend
     credentials: true,
   });
+
+  // Global API prefix qo'shish
+  app.setGlobalPrefix('api');
+
   await app.listen(process.env.PORT ?? 3001);
 }
 bootstrap();
