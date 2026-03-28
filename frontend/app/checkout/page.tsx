@@ -51,7 +51,7 @@ export default function CheckoutPage() {
         const [profRes, cartRes, settRes] = await Promise.all([
           axios.get(`${API_BASE_URL}/auth/profile`, { headers: { Authorization: "Bearer " + token } }),
           axios.get(`${API_BASE_URL}/cart`, { headers: { Authorization: "Bearer " + token } }),
-          axios.get(`${API_BASE_URL}/admin/settings`)
+          axios.get(`${API_BASE_URL}/settings`)
         ]);
 
         const p = profRes.data;
