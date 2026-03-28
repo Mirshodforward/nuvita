@@ -12,6 +12,12 @@ interface RegistrationToken {
   createdAt: number;
 }
 
+interface LinkToken {
+  phone: string;
+  userId: number;
+  createdAt: number;
+}
+
 @Injectable()
 export class TelegramService implements OnModuleInit {
   private bot: Telegraf;
@@ -22,6 +28,9 @@ export class TelegramService implements OnModuleInit {
   // Registration tokens storage (expires after 1 hour)
   private registrationTokens = new Map<string, RegistrationToken>();
   private readonly TOKEN_EXPIRY = 60 * 60 * 1000; // 1 hour
+
+  // Link tokens storage - for linking existing web users to Telegram
+  private linkTokens = new Map<string, LinkToken>();
 
   constructor(private readonly prisma: PrismaService) {
     this.bot = new Telegraf(
@@ -42,6 +51,12 @@ export class TelegramService implements OnModuleInit {
     for (const [token, data] of this.registrationTokens.entries()) {
       if (now - data.createdAt > this.TOKEN_EXPIRY) {
         this.registrationTokens.delete(token);
+      }
+    }
+    // Also cleanup link tokens
+    for (const [token, data] of this.linkTokens.entries()) {
+      if (now - data.createdAt > this.TOKEN_EXPIRY) {
+        this.linkTokens.delete(token);
       }
     }
   }
@@ -65,10 +80,89 @@ export class TelegramService implements OnModuleInit {
     this.registrationTokens.delete(token);
   }
 
+  // Generate link token for existing web user to connect Telegram
+  public generateLinkToken(phone: string, userId: number): string {
+    const token = 'link_' + this.generateToken();
+    this.linkTokens.set(token, {
+      phone,
+      userId,
+      createdAt: Date.now(),
+    });
+    return token;
+  }
+
+  // Get link token data
+  public getLinkToken(token: string): LinkToken | null {
+    const data = this.linkTokens.get(token);
+    if (!data) return null;
+    
+    if (Date.now() - data.createdAt > this.TOKEN_EXPIRY) {
+      this.linkTokens.delete(token);
+      return null;
+    }
+    
+    return data;
+  }
+
+  // Delete link token after successful linking
+  public deleteLinkToken(token: string) {
+    this.linkTokens.delete(token);
+  }
+
   onModuleInit() {
     // /start command handler
     this.bot.start(async (ctx) => {
       const telegramUserId = String(ctx.from.id);
+      const telegramUsername = ctx.from.username || null;
+      const telegramFullName = [ctx.from.first_name, ctx.from.last_name].filter(Boolean).join(' ') || null;
+      
+      // Check if this is a link request from web profile
+      const startParam = (ctx as any).startPayload || '';
+      if (startParam.startsWith('link_')) {
+        const linkToken = startParam;
+        const linkData = this.getLinkToken(linkToken);
+        
+        if (!linkData) {
+          await ctx.reply(
+            "❌ Havola yaroqsiz yoki muddati tugagan.\n\nIltimos, profil sahifasidan qaytadan ulash tugmasini bosing.",
+            Markup.removeKeyboard()
+          );
+          return;
+        }
+
+        // Check if this TG account is already linked to another user
+        const existingTgUser = await this.prisma.user.findUnique({
+          where: { userId: telegramUserId }
+        });
+
+        if (existingTgUser && existingTgUser.id !== linkData.userId) {
+          await ctx.reply(
+            "⚠️ Bu Telegram hisob boshqa foydalanuvchiga ulangan.\n\nIltimos, boshqa Telegram hisobdan foydalaning.",
+            Markup.removeKeyboard()
+          );
+          return;
+        }
+
+        // Link the Telegram account to the web user
+        await this.prisma.user.update({
+          where: { id: linkData.userId },
+          data: {
+            userId: telegramUserId,
+            username: telegramUsername,
+            fullName: telegramFullName,
+          },
+        });
+
+        this.deleteLinkToken(linkToken);
+
+        await ctx.reply(
+          `✅ Telegram hisobingiz muvaffaqiyatli ulandi!\n\n🎉 Endi siz botdan to'liq foydalanishingiz mumkin.`,
+          Markup.inlineKeyboard([
+            [Markup.button.webApp("🛒 Do'konga kirish", this.MINI_APP_URL)]
+          ])
+        );
+        return;
+      }
       
       // Check if user is registered by TG userId
       const user = await this.prisma.user.findUnique({

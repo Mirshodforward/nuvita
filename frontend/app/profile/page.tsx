@@ -21,7 +21,10 @@ import {
   Edit2,
   Save,
   X,
-  Globe
+  Globe,
+  MessageCircle,
+  ExternalLink,
+  Loader2
 } from "lucide-react";
 import { getTelegramUser, getTelegramWebApp, isTelegramMiniApp } from "@/lib/telegram";
 
@@ -64,6 +67,7 @@ export default function ProfilePage() {
   const [activeTab, setActiveTab] = useState<TabType>('info');
   const [isEditing, setIsEditing] = useState(false);
   const [formData, setFormData] = useState<Partial<UserProfile>>({});
+  const [linkingTelegram, setLinkingTelegram] = useState(false);
 
   useEffect(() => {
     let inTg = false;
@@ -168,6 +172,31 @@ export default function ProfilePage() {
     router.push("/");
   };
 
+  // Handle connecting Telegram account
+  const handleConnectTelegram = async () => {
+    if (!token) return;
+    
+    setLinkingTelegram(true);
+    try {
+      const res = await axios.post(`${API_BASE_URL}/user/telegram-link`, {}, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      
+      if (res.data.linked) {
+        // Already linked, refresh profile
+        fetchData(token);
+      } else if (res.data.link) {
+        // Open Telegram bot link
+        window.open(res.data.link, '_blank');
+      }
+    } catch (error) {
+      console.error('Telegram link error:', error);
+      alert('Xatolik yuz berdi');
+    } finally {
+      setLinkingTelegram(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex justify-center items-center h-64 bg-white">
@@ -204,6 +233,57 @@ export default function ProfilePage() {
                 {profile?.number?.startsWith('tg_') ? 'Telegram orqali' : profile?.number}
               </p>
             </div>
+
+            {/* Telegram Connection Block */}
+            {!isTelegramMiniApp() && (
+              <div className="bg-white border border-gray-100 rounded-2xl shadow-sm p-4 mb-4">
+                {profile?.userId ? (
+                  // Telegram is connected
+                  <div className="flex items-center gap-3">
+                    <div className="p-2.5 bg-blue-500 rounded-xl text-white">
+                      <MessageCircle size={20} />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs text-gray-500 mb-0.5">Telegram ulangan</p>
+                      <p className="font-semibold text-gray-800 truncate">
+                        {profile.username ? `@${profile.username}` : 'Ulangan'}
+                      </p>
+                    </div>
+                    <CheckCircle size={20} className="text-green-500 flex-shrink-0" />
+                  </div>
+                ) : (
+                  // Telegram not connected
+                  <div>
+                    <div className="flex items-center gap-3 mb-3">
+                      <div className="p-2.5 bg-gray-100 rounded-xl text-gray-400">
+                        <MessageCircle size={20} />
+                      </div>
+                      <div className="flex-1">
+                        <p className="text-sm font-semibold text-gray-800">Telegram ulanmagan</p>
+                        <p className="text-xs text-gray-500">Botdan xabarlarni olish uchun ulang</p>
+                      </div>
+                    </div>
+                    <button
+                      onClick={handleConnectTelegram}
+                      disabled={linkingTelegram}
+                      className="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white font-medium py-2.5 px-4 rounded-xl transition-all disabled:opacity-50"
+                    >
+                      {linkingTelegram ? (
+                        <>
+                          <Loader2 size={16} className="animate-spin" />
+                          Yuklanmoqda...
+                        </>
+                      ) : (
+                        <>
+                          <ExternalLink size={16} />
+                          Telegram ulash
+                        </>
+                      )}
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
 
             <div className="bg-white border border-gray-100 rounded-2xl shadow-sm overflow-hidden">
               <button 
@@ -391,6 +471,22 @@ export default function ProfilePage() {
                           {profile?.gender === 'MALE' ? 'Erkak' : profile?.gender === 'FEMALE' ? 'Ayol' : "Kiritilmagan"}
                         </p>
                       </div>
+                    </div>
+                    <div className={`p-4 rounded-xl flex items-center gap-4 ${profile?.userId ? 'bg-blue-50' : 'bg-gray-50'}`}>
+                      <div className={`p-2.5 rounded-lg ${profile?.userId ? 'bg-blue-500/20 text-blue-500' : 'bg-gray-200 text-gray-400'}`}>
+                        <MessageCircle size={22} />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="text-xs font-medium mb-0.5 text-gray-500">Telegram</p>
+                        <p className={`font-semibold ${profile?.userId ? 'text-blue-600' : 'text-gray-500'}`}>
+                          {profile?.userId 
+                            ? (profile.username ? `@${profile.username}` : 'Ulangan') 
+                            : "Ulanmagan"}
+                        </p>
+                      </div>
+                      {profile?.userId && (
+                        <CheckCircle size={18} className="text-green-500" />
+                      )}
                     </div>
                   </div>
                 )}

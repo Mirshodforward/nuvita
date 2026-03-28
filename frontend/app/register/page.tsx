@@ -137,7 +137,12 @@ function RegisterForm() {
     } catch (err: any) {
       console.error(err);
       if (err.response?.status === 409) {
-        setError("Bu raqam orqali allaqachon ro'yxatdan o'tilgan.");
+        const message = err.response?.data?.message || "";
+        if (message.includes("Telegram")) {
+          setError("Bu Telegram hisob allaqachon ro'yxatdan o'tgan. Iltimos, /start bosib qaytadan urinib ko'ring.");
+        } else {
+          setError("Bu raqam orqali allaqachon ro'yxatdan o'tilgan.");
+        }
       } else if (err.response?.status === 404) {
         setError("Havola yaroqsiz yoki muddati tugagan.");
       } else {
@@ -151,9 +156,9 @@ function RegisterForm() {
   // Initial loading state
   if (initialLoading) {
     return (
-      <div className="flex min-h-full flex-1 flex-col justify-center items-center px-6 py-12">
-        <Loader2 className="w-10 h-10 text-green-600 animate-spin" />
-        <p className="mt-4 text-gray-600">Yuklanmoqda...</p>
+      <div className="min-h-screen bg-gradient-to-b from-green-50 to-white flex flex-col justify-center items-center px-6 py-12">
+        <Loader2 className="w-12 h-12 text-green-600 animate-spin" />
+        <p className="mt-4 text-gray-600 font-medium">Yuklanmoqda...</p>
       </div>
     );
   }
@@ -161,24 +166,26 @@ function RegisterForm() {
   // Token error state
   if (tokenError) {
     return (
-      <div className="flex min-h-full flex-1 flex-col justify-center items-center px-6 py-12">
-        <div className="bg-red-50 rounded-full p-6 mb-6">
-          <AlertCircle className="w-16 h-16 text-red-500" />
+      <div className="min-h-screen bg-gradient-to-b from-red-50 to-white flex flex-col justify-center items-center px-6 py-12">
+        <div className="bg-white rounded-2xl shadow-lg p-8 max-w-sm w-full text-center">
+          <div className="bg-red-100 rounded-full p-5 mb-6 mx-auto w-fit">
+            <AlertCircle className="w-12 h-12 text-red-500" />
+          </div>
+          <h2 className="text-xl font-bold text-gray-900 mb-3">
+            Xatolik
+          </h2>
+          <p className="text-gray-600 text-sm leading-relaxed">
+            {tokenError}
+          </p>
+          {isTelegramMiniApp() && (
+            <button
+              onClick={() => getTelegramWebApp()?.close()}
+              className="mt-6 w-full px-6 py-3 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl font-medium transition-colors"
+            >
+              Yopish
+            </button>
+          )}
         </div>
-        <h2 className="text-xl font-bold text-gray-900 mb-2">
-          Xatolik
-        </h2>
-        <p className="text-gray-600 text-center max-w-sm">
-          {tokenError}
-        </p>
-        {isTelegramMiniApp() && (
-          <button
-            onClick={() => getTelegramWebApp()?.close()}
-            className="mt-6 px-6 py-3 bg-gray-100 text-gray-700 rounded-xl font-medium"
-          >
-            Yopish
-          </button>
-        )}
       </div>
     );
   }
@@ -186,33 +193,37 @@ function RegisterForm() {
   // Success state
   if (success) {
     return (
-      <div className="flex min-h-full flex-1 flex-col justify-center items-center px-6 py-12">
-        <div className="bg-green-50 rounded-full p-6 mb-6">
-          <CheckCircle className="w-16 h-16 text-green-500" />
+      <div className="min-h-screen bg-gradient-to-b from-green-50 to-white flex flex-col justify-center items-center px-6 py-12">
+        <div className="bg-white rounded-2xl shadow-lg p-8 max-w-sm w-full text-center">
+          <div className="bg-green-100 rounded-full p-5 mb-6 mx-auto w-fit">
+            <CheckCircle className="w-12 h-12 text-green-500" />
+          </div>
+          <h2 className="text-2xl font-bold text-gray-900 mb-3">
+            Muvaffaqiyatli!
+          </h2>
+          <p className="text-gray-600 text-sm">
+            Ro'yxatdan o'tish yakunlandi.
+          </p>
+          <p className="text-green-600 text-sm font-medium mt-2">
+            Asosiy sahifaga yo'naltirilmoqda...
+          </p>
         </div>
-        <h2 className="text-2xl font-bold text-gray-900 mb-2">
-          Muvaffaqiyatli!
-        </h2>
-        <p className="text-gray-600 text-center">
-          Ro'yxatdan o'tish yakunlandi.
-          <br />
-          Asosiy sahifaga yo'naltirilmoqda...</p>
       </div>
     );
   }
 
   return (
-    <div className="flex min-h-full flex-1 flex-col justify-center px-6 py-12 lg:px-8">
-      <div className="sm:mx-auto sm:w-full sm:max-w-sm">
+    <div className="min-h-screen bg-gradient-to-b from-green-50 via-white to-white flex flex-col justify-center px-4 py-8 sm:px-6 lg:px-8">
+      <div className="sm:mx-auto sm:w-full sm:max-w-md">
         {/* Header */}
-        <div className="text-center">
-          <div className="mx-auto w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mb-4">
-            <Lock className="w-8 h-8 text-green-600" />
+        <div className="text-center mb-6">
+          <div className="mx-auto w-20 h-20 bg-gradient-to-br from-green-400 to-green-600 rounded-2xl flex items-center justify-center mb-5 shadow-lg shadow-green-200">
+            <Lock className="w-10 h-10 text-white" />
           </div>
-          <h2 className="text-2xl font-bold tracking-tight text-gray-900">
+          <h2 className="text-2xl sm:text-3xl font-bold tracking-tight text-gray-900">
             {isTgMode ? "Parol o'rnatish" : "Ro'yxatdan o'tish"}
           </h2>
-          <p className="mt-2 text-sm text-gray-600">
+          <p className="mt-2 text-sm text-gray-500">
             {isTgMode 
               ? "Saytga kirish uchun parol yarating" 
               : "Yangi hisob yaratish"}
@@ -220,114 +231,117 @@ function RegisterForm() {
         </div>
       </div>
 
-      <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-sm">
-        <form onSubmit={handleRegisterSubmit} className="space-y-5">
-          {/* Phone number - readonly in TG mode */}
-          <div>
-            <label htmlFor="phone" className="flex items-center gap-2 text-sm font-medium text-gray-900 mb-2">
-              <Phone size={16} />
-              Telefon raqam
-            </label>
-            <input
-              id="phone"
-              name="phone"
-              type="text"
-              required
-              readOnly={isTgMode}
-              value={phone}
-              onChange={(e) => setPhone(e.target.value)}
-              placeholder="+998 90 123 45 67"
-              className={`block w-full rounded-xl bg-white px-4 py-3 text-base text-gray-900 border border-gray-200 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent ${isTgMode ? 'bg-gray-50 text-gray-600' : ''}`}
-            />
-          </div>
-
-          {/* Full name - show in TG mode if available */}
-          {fullName && (
+      <div className="sm:mx-auto sm:w-full sm:max-w-md">
+        <div className="bg-white rounded-2xl shadow-xl shadow-gray-100 p-6 sm:p-8 border border-gray-100">
+          <form onSubmit={handleRegisterSubmit} className="space-y-5">
+            {/* Phone number - readonly in TG mode */}
             <div>
-              <label className="flex items-center gap-2 text-sm font-medium text-gray-900 mb-2">
-                <User size={16} />
-                Ism
+              <label htmlFor="phone" className="flex items-center gap-2 text-sm font-semibold text-gray-800 mb-2">
+                <Phone size={16} className="text-green-600" />
+                Telefon raqam
               </label>
               <input
+                id="phone"
+                name="phone"
                 type="text"
-                readOnly
-                value={fullName}
-                className="block w-full rounded-xl bg-gray-50 px-4 py-3 text-base text-gray-600 border border-gray-200"
+                required
+                readOnly={isTgMode}
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
+                placeholder="+998 90 123 45 67"
+                className={`block w-full rounded-xl px-4 py-3.5 text-base text-gray-900 border-2 placeholder:text-gray-400 focus:outline-none focus:ring-0 transition-colors ${isTgMode ? 'bg-gray-50 border-gray-200 text-gray-600 cursor-not-allowed' : 'bg-white border-gray-200 focus:border-green-500'}`}
               />
             </div>
-          )}
 
-          {/* Password */}
-          <div>
-            <label htmlFor="password" className="flex items-center gap-2 text-sm font-medium text-gray-900 mb-2">
-              <Lock size={16} />
-              Parol
-            </label>
-            <input
-              id="password"
-              name="password"
-              type="password"
-              required
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="Kamida 6 ta belgi"
-              className="block w-full rounded-xl bg-white px-4 py-3 text-base text-gray-900 border border-gray-200 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
-            />
-          </div>
+            {/* Full name - show in TG mode if available */}
+            {fullName && (
+              <div>
+                <label className="flex items-center gap-2 text-sm font-semibold text-gray-800 mb-2">
+                  <User size={16} className="text-green-600" />
+                  Ism
+                </label>
+                <input
+                  type="text"
+                  readOnly
+                  value={fullName}
+                  className="block w-full rounded-xl bg-gray-50 px-4 py-3.5 text-base text-gray-600 border-2 border-gray-200 cursor-not-allowed"
+                />
+              </div>
+            )}
 
-          {/* Confirm Password */}
-          <div>
-            <label htmlFor="confirmPassword" className="flex items-center gap-2 text-sm font-medium text-gray-900 mb-2">
-              <Lock size={16} />
-              Parolni tasdiqlang
-            </label>
-            <input
-              id="confirmPassword"
-              name="confirmPassword"
-              type="password"
-              required
-              value={confirmPassword}
-              onChange={(e) => setConfirmPassword(e.target.value)}
-              placeholder="Parolni qayta kiriting"
-              className="block w-full rounded-xl bg-white px-4 py-3 text-base text-gray-900 border border-gray-200 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
-            />
-          </div>
+            {/* Password */}
+            <div>
+              <label htmlFor="password" className="flex items-center gap-2 text-sm font-semibold text-gray-800 mb-2">
+                <Lock size={16} className="text-green-600" />
+                Parol
+              </label>
+              <input
+                id="password"
+                name="password"
+                type="password"
+                required
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="Kamida 6 ta belgi"
+                className="block w-full rounded-xl bg-white px-4 py-3.5 text-base text-gray-900 border-2 border-gray-200 placeholder:text-gray-400 focus:outline-none focus:border-green-500 transition-colors"
+              />
+            </div>
 
-          {/* Error message */}
-          {error && (
-            <div className="bg-red-50 border border-red-200 rounded-xl px-4 py-3">
-              <p className="text-red-600 text-sm">{error}</p>
+            {/* Confirm Password */}
+            <div>
+              <label htmlFor="confirmPassword" className="flex items-center gap-2 text-sm font-semibold text-gray-800 mb-2">
+                <Lock size={16} className="text-green-600" />
+                Parolni tasdiqlang
+              </label>
+              <input
+                id="confirmPassword"
+                name="confirmPassword"
+                type="password"
+                required
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                placeholder="Parolni qayta kiriting"
+                className="block w-full rounded-xl bg-white px-4 py-3.5 text-base text-gray-900 border-2 border-gray-200 placeholder:text-gray-400 focus:outline-none focus:border-green-500 transition-colors"
+              />
+            </div>
+
+            {/* Error message */}
+            {error && (
+              <div className="bg-red-50 border-2 border-red-200 rounded-xl px-4 py-3">
+                <p className="text-red-600 text-sm font-medium">{error}</p>
+              </div>
+            )}
+
+            {/* Submit button */}
+            <button
+              type="submit"
+              disabled={loading}
+              className="flex w-full justify-center items-center gap-2 rounded-xl bg-gradient-to-r from-green-500 to-green-600 px-4 py-4 text-base font-bold text-white shadow-lg shadow-green-200 hover:from-green-600 hover:to-green-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-green-600 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+            >
+              {loading ? (
+                <>
+                  <Loader2 className="w-5 h-5 animate-spin" />
+                  Kutilmoqda...
+                </>
+              ) : (
+                <>
+                  <CheckCircle size={20} />
+                  {isTgMode ? "Parolni saqlash" : "Ro'yxatdan o'tish"}
+                </>
+              )}
+            </button>
+          </form>
+
+          {/* Info text for TG mode */}
+          {isTgMode && (
+            <div className="mt-5 p-4 bg-blue-50 rounded-xl border border-blue-100">
+              <p className="text-center text-xs text-blue-700">
+                <span className="font-medium">💡 Eslatma:</span> Bu parol saytga kirishda ishlatiladi.
+                Telegram orqali avtomatik kirasiz.
+              </p>
             </div>
           )}
-
-          {/* Submit button */}
-          <button
-            type="submit"
-            disabled={loading}
-            className="flex w-full justify-center items-center gap-2 rounded-xl bg-green-600 px-4 py-3.5 text-base font-semibold text-white shadow-sm hover:bg-green-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-green-600 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
-          >
-            {loading ? (
-              <>
-                <Loader2 className="w-5 h-5 animate-spin" />
-                Kutilmoqda...
-              </>
-            ) : (
-              <>
-                <CheckCircle size={20} />
-                {isTgMode ? "Parolni saqlash" : "Ro'yxatdan o'tish"}
-              </>
-            )}
-          </button>
-        </form>
-
-        {/* Info text for TG mode */}
-        {isTgMode && (
-          <p className="mt-6 text-center text-xs text-gray-500">
-            Bu parol saytga kirishda ishlatiladi.
-            <br />
-            Telegram orqali avtomatik kirasiz.
-          </p>
-        )}
+        </div>
       </div>
     </div>
   );
@@ -336,8 +350,8 @@ function RegisterForm() {
 export default function RegisterPage() {
   return (
     <Suspense fallback={
-      <div className="flex min-h-full items-center justify-center">
-        <Loader2 className="w-8 h-8 text-green-600 animate-spin" />
+      <div className="min-h-screen bg-gradient-to-b from-green-50 to-white flex items-center justify-center">
+        <Loader2 className="w-10 h-10 text-green-600 animate-spin" />
       </div>
     }>
       <RegisterForm />

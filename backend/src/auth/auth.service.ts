@@ -35,22 +35,49 @@ export class AuthService {
     passwordString: string,
     telegramData?: { userId?: string; username?: string; fullName?: string },
   ) {
-    const existing = await this.prisma.user.findUnique({ where: { number } });
-    if (existing) {
-      throw new HttpException('User already exists', HttpStatus.CONFLICT);
+    // Check if phone number already exists
+    const existingByPhone = await this.prisma.user.findUnique({ where: { number } });
+    if (existingByPhone) {
+      throw new HttpException('Bu telefon raqam allaqachon ro\'yxatdan o\'tgan', HttpStatus.CONFLICT);
     }
-    const hashedPassword = await bcrypt.hash(passwordString, 10);
-    const user = await this.prisma.user.create({
-      data: {
-        number,
-        password: hashedPassword,
-        userId: telegramData?.userId || null,
-        username: telegramData?.username || null,
-        fullName: telegramData?.fullName || null,
-      },
-    });
 
-    return this.generateTokens(user.id, user.number);
+    // Check if Telegram userId already exists (if provided)
+    if (telegramData?.userId) {
+      const existingByTelegramId = await this.prisma.user.findUnique({ 
+        where: { userId: telegramData.userId } 
+      });
+      if (existingByTelegramId) {
+        throw new HttpException('Bu Telegram hisob allaqachon ro\'yxatdan o\'tgan', HttpStatus.CONFLICT);
+      }
+    }
+
+    try {
+      const hashedPassword = await bcrypt.hash(passwordString, 10);
+      const user = await this.prisma.user.create({
+        data: {
+          number,
+          password: hashedPassword,
+          userId: telegramData?.userId || null,
+          username: telegramData?.username || null,
+          fullName: telegramData?.fullName || null,
+        },
+      });
+
+      return this.generateTokens(user.id, user.number);
+    } catch (error: any) {
+      // Handle any Prisma unique constraint errors
+      if (error.code === 'P2002') {
+        const target = error.meta?.target;
+        if (target?.includes('user_id')) {
+          throw new HttpException('Bu Telegram hisob allaqachon ro\'yxatdan o\'tgan', HttpStatus.CONFLICT);
+        }
+        if (target?.includes('number')) {
+          throw new HttpException('Bu telefon raqam allaqachon ro\'yxatdan o\'tgan', HttpStatus.CONFLICT);
+        }
+        throw new HttpException('Ma\'lumotlar takrorlanmoqda', HttpStatus.CONFLICT);
+      }
+      throw error;
+    }
   }
 
   async login(number: string, passwordString: string) {
