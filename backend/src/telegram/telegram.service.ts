@@ -283,16 +283,14 @@ export class TelegramService implements OnModuleInit {
     
     if (user.role === 'ADMIN') {
       await ctx.reply(
-        `🔑 Xush kelibsiz, Admin ${displayName}!`,
-        Markup.keyboard([
-          ['📊 Yangi buyurtmalar', '📦 Barcha buyurtmalar'],
-          ['👥 Mijozlar', '🛵 Kuryerlar'],
-          ['⚙️ Sozlamalar']
-        ]).resize()
+        `🔑 Admin ${displayName}, xush kelibsiz!`,
+        Markup.inlineKeyboard([
+          [Markup.button.url("📊 Admin Panel", `${this.WEBSITE_URL}/admin`)]
+        ])
       );
     } else if (user.role === 'COURIER') {
       await ctx.reply(
-        `🛵 Xush kelibsiz, Kuryer ${displayName}!`,
+        `🛵 Xodim kuryer ${displayName}, xush kelibsiz!`,
         Markup.keyboard([
           ['📦 Yangi buyurtmalar', '✅ Yetkazilganlar'],
           ['👤 Mening profilim']

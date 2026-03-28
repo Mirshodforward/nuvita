@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useEffect, useState } from "react";
@@ -6,7 +5,8 @@ import axios from "axios";
 import { API_BASE_URL } from "@/lib/api";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { Trash2, Plus, Minus, ArrowRight, ShoppingBag } from "lucide-react";
+import { Trash2, Plus, Minus, ArrowRight, ShoppingBag, ArrowLeft } from "lucide-react";
+import { getTelegramWebApp, isTelegramMiniApp } from "@/lib/telegram";
 
 interface Product {
   productId: string;
@@ -36,6 +36,17 @@ export default function CartPage() {
   const router = useRouter();
 
   useEffect(() => {
+    // TG BackButton
+    if (isTelegramMiniApp()) {
+      const webApp = getTelegramWebApp();
+      if (webApp?.BackButton) {
+        webApp.BackButton.show();
+        webApp.BackButton.onClick(() => {
+          router.push('/');
+        });
+      }
+    }
+
     const t = localStorage.getItem("accessToken");
     if (!t) {
       router.push("/login");
@@ -43,7 +54,14 @@ export default function CartPage() {
     }
     setToken(t);
     fetchCart(t);
-  }, []);
+
+    return () => {
+      if (isTelegramMiniApp()) {
+        const webApp = getTelegramWebApp();
+        webApp?.BackButton?.hide();
+      }
+    };
+  }, [router]);
 
   const fetchCart = async (t: string) => {
     try {
@@ -99,126 +117,162 @@ export default function CartPage() {
 
   if (loading) {
     return (
-      <div className="flex h-[70vh] items-center justify-center space-x-2 text-gray-500">
-        <div className="w-5 h-5 border-4 border-gray-300 border-t-black rounded-full animate-spin"></div>
-        <span className="font-medium text-lg">Savat yuklanmoqda...</span>
+      <div className="flex h-[60vh] items-center justify-center">
+        <div className="flex flex-col items-center gap-3">
+          <div className="w-8 h-8 border-3 border-gray-200 border-t-green-600 rounded-full animate-spin"></div>
+          <span className="text-gray-500 text-sm">Yuklanmoqda...</span>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        <div className="flex items-center justify-between mb-8">
-          <h1 className="text-3xl items-center flex gap-3 font-semibold text-gray-900 tracking-tight">
-             <ShoppingBag size={28} className="text-green-600" /> Savat
-          </h1>
+    <div className="min-h-screen bg-gray-50 pb-32">
+      {/* Header */}
+      <div className="bg-white sticky top-0 z-10 border-b">
+        <div className="max-w-3xl mx-auto px-4 py-3 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <button onClick={() => router.push('/')} className="p-2 -ml-2 text-gray-600 hover:text-gray-900">
+              <ArrowLeft size={20} />
+            </button>
+            <h1 className="text-lg font-bold text-gray-900 flex items-center gap-2">
+              <ShoppingBag size={20} className="text-green-600" />
+              Savat
+              {cart && cart.count > 0 && (
+                <span className="bg-green-100 text-green-700 text-xs font-bold px-2 py-0.5 rounded-full">
+                  {cart.count}
+                </span>
+              )}
+            </h1>
+          </div>
           {cart && cart.items.length > 0 && (
-            <button onClick={clearCart} className="text-sm font-medium text-red-500 hover:text-red-600 transition underline underline-offset-2">
-              Hammasini o`chirish
+            <button onClick={clearCart} className="text-xs font-medium text-red-500 hover:text-red-600">
+              Tozalash
             </button>
           )}
         </div>
+      </div>
 
+      <div className="max-w-3xl mx-auto px-4 py-4">
         {!cart || cart.items.length === 0 ? (
-          <div className="bg-white rounded-3xl p-16 text-center max-w-lg mx-auto shadow-sm border border-gray-100 flex flex-col items-center">
-            <div className="w-20 h-20 bg-gray-50 rounded-full flex items-center justify-center mb-6">
-              <ShoppingBag size={36} className="text-gray-400" />
+          <div className="bg-white rounded-2xl p-8 text-center shadow-sm border border-gray-100">
+            <div className="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mx-auto mb-4">
+              <ShoppingBag size={28} className="text-gray-300" />
             </div>
-            <h2 className="text-2xl font-medium text-gray-900 mb-2">Savatingiz bo`sh</h2>
-            <p className="text-gray-500 mb-8">Hali hech qanday mahsulot qoshmadingiz.</p>
-            <Link href="/" className="inline-flex items-center justify-center bg-black hover:bg-gray-800 text-white px-8 py-3.5 rounded-xl font-medium transition duration-200">
-              Bosh sahifaga qaytish
+            <h2 className="text-lg font-semibold text-gray-900 mb-1">Savat bo&apos;sh</h2>
+            <p className="text-sm text-gray-500 mb-6">Hali mahsulot qo&apos;shilmagan</p>
+            <Link href="/" className="inline-flex items-center justify-center bg-green-600 hover:bg-green-700 text-white px-6 py-2.5 rounded-xl font-medium text-sm transition">
+              Xarid qilish
             </Link>
           </div>
         ) : (
-          <div className="flex flex-col lg:flex-row gap-10">
+          <>
             {/* Products List */}
-            <div className="flex-1">
-              <div className="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden">
-                <ul className="divide-y divide-gray-50">
-                  {cart.items.map((item) => (
-                    <li key={item.id} className="p-6 flex items-center gap-6 hover:bg-gray-50/50 transition">
-                      <div className="w-20 h-20 rounded-2xl overflow-hidden bg-gray-100 shrink-0 border border-gray-50">
-                        {item.product.photoUrl ? (
-                          <img src={`${API_BASE_URL}` + item.product.photoUrl} className="w-full h-full object-cover" alt={item.product.name} />
-                        ) : (
-                          <div className="w-full h-full flex justify-center items-center text-xs text-gray-400">Rasm yo`q</div>
-                        )}
-                      </div>
+            <div className="space-y-3 mb-4">
+              {cart.items.map((item) => (
+                <div key={item.id} className="bg-white rounded-2xl p-3 shadow-sm border border-gray-100">
+                  <div className="flex gap-3">
+                    {/* Product Image */}
+                    <div className="w-20 h-20 rounded-xl overflow-hidden bg-gray-100 shrink-0">
+                      {item.product.photoUrl ? (
+                        <img 
+                          src={`${API_BASE_URL}` + item.product.photoUrl} 
+                          className="w-full h-full object-cover" 
+                          alt={item.product.name} 
+                        />
+                      ) : (
+                        <div className="w-full h-full flex justify-center items-center text-xs text-gray-400">
+                          Rasm yo&apos;q
+                        </div>
+                      )}
+                    </div>
 
-                      <div className="flex-1 min-w-0">
-                        <Link href={"/" + encodeURIComponent(item.product.name)} className="text-lg font-medium text-gray-900 hover:text-green-600 transition truncate block mb-1">
-                          {item.product.name}
-                        </Link>
-                        <p className="text-sm font-medium text-gray-500">{item.product.price.toLocaleString()} so`m / dona</p>
-                      </div>
-
-                      <div className="flex items-center gap-6">
-                        <div className="flex items-center bg-white border border-gray-200 rounded-xl overflow-hidden shadow-sm">
-                          <button onClick={() => updateItem(item.id, "decrement")} className="p-2.5 text-gray-600 hover:bg-gray-50 transition active:bg-gray-100">
-                            <Minus size={16} strokeWidth={2.5} />
+                    {/* Product Info */}
+                    <div className="flex-1 min-w-0 flex flex-col">
+                      <Link 
+                        href={"/" + encodeURIComponent(item.product.name)} 
+                        className="text-sm font-semibold text-gray-900 line-clamp-2 leading-tight mb-1"
+                      >
+                        {item.product.name}
+                      </Link>
+                      <p className="text-xs text-gray-500 mb-2">
+                        {item.product.price.toLocaleString()} so&apos;m / dona
+                      </p>
+                      
+                      {/* Controls Row */}
+                      <div className="flex items-center justify-between mt-auto">
+                        {/* Quantity Controls */}
+                        <div className="flex items-center bg-gray-50 rounded-lg overflow-hidden border border-gray-200">
+                          <button 
+                            onClick={() => updateItem(item.id, "decrement")} 
+                            className="w-8 h-8 flex items-center justify-center text-gray-600 hover:bg-gray-100 active:bg-gray-200 transition"
+                          >
+                            <Minus size={14} strokeWidth={2.5} />
                           </button>
-                          <span className="w-10 text-center font-semibold text-gray-800 tabular-nums">{item.productCount}</span>
-                          <button onClick={() => updateItem(item.id, "increment")} className="p-2.5 text-green-600 hover:bg-green-50 transition active:bg-green-100">
-                            <Plus size={16} strokeWidth={2.5} />
+                          <span className="w-8 text-center font-bold text-sm text-gray-900">
+                            {item.productCount}
+                          </span>
+                          <button 
+                            onClick={() => updateItem(item.id, "increment")} 
+                            className="w-8 h-8 flex items-center justify-center text-green-600 hover:bg-green-50 active:bg-green-100 transition"
+                          >
+                            <Plus size={14} strokeWidth={2.5} />
                           </button>
                         </div>
-                        
-                        <div className="hidden sm:block w-32 text-right">
-                          <div className="text-lg font-semibold text-gray-900 tabular-nums">
-                            {(item.product.price * item.productCount).toLocaleString()}
-                          </div>
+
+                        {/* Price & Delete */}
+                        <div className="flex items-center gap-2">
+                          <span className="font-bold text-gray-900 text-sm">
+                            {(item.product.price * item.productCount).toLocaleString()} so&apos;m
+                          </span>
+                          <button 
+                            onClick={() => removeItem(item.id)} 
+                            className="w-8 h-8 flex items-center justify-center text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition"
+                          >
+                            <Trash2 size={16} />
+                          </button>
                         </div>
-
-                        <button onClick={() => removeItem(item.id)} className="p-2.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-xl transition" title="O`chirish">
-                          <Trash2 size={20} />
-                        </button>
                       </div>
-                    </li>
-                  ))}
-                </ul>
-              </div>
+                    </div>
+                  </div>
+                </div>
+              ))}
             </div>
 
-            {/* Order Summary */}
-            <div className="w-full lg:w-[380px] shrink-0">
-              <div className="bg-white p-8 rounded-3xl shadow-sm border border-gray-100 sticky top-8">
-                <h3 className="text-xl font-semibold text-gray-900 mb-6">Maxsus chegirma</h3>
-                
-                <div className="space-y-4 mb-6">
-                  <div className="flex justify-between text-gray-600">
-                    <span>Mahsulotlar soni</span>
-                    <span className="font-medium text-gray-900">{cart.count} dona</span>
-                  </div>
-                  <div className="flex justify-between text-gray-600">
-                    <span>Oraliq summa</span>
-                    <span className="font-medium text-gray-900">{cart.summ.toLocaleString()} so`m</span>
-                  </div>
-                </div>
-
-                <div className="pt-6 border-t border-gray-100 mb-8">
-                  <div className="flex justify-between items-center mb-1">
-                    <span className="text-base font-medium text-gray-900">Jami to`lov</span>
-                    <span className="text-2xl font-bold tracking-tight text-gray-900">{cart.summ.toLocaleString()} so`m</span>
-                  </div>
-                  <p className="text-xs text-gray-500 text-right mt-1">Yetkazib berish xizmati keyingi bosqichda hisoblanadi</p>
-                </div>
-
-                <div className="space-y-3">
-                  <button onClick={proceedToCheckout} className="w-full flex items-center justify-center gap-2 bg-green-600 hover:bg-green-700 text-white py-4 rounded-2xl font-semibold text-lg transition duration-200">
-                    Rasmiylashtirish <ArrowRight size={20} />
-                  </button>
-                  <Link href="/" className="w-full flex items-center justify-center py-4 text-gray-600 hover:text-gray-900 font-medium transition duration-200">
-                    Boshqa mahsulot izlash
-                  </Link>
-                </div>
-              </div>
-            </div>
-            
-          </div>
+            {/* Add More */}
+            <Link 
+              href="/" 
+              className="block text-center text-sm text-green-600 font-medium py-3 hover:text-green-700"
+            >
+              + Yana mahsulot qo&apos;shish
+            </Link>
+          </>
         )}
       </div>
+
+      {/* Fixed Bottom Summary */}
+      {cart && cart.items.length > 0 && (
+        <div className="fixed bottom-0 left-0 right-0 bg-white border-t shadow-lg z-20">
+          <div className="max-w-3xl mx-auto px-4 py-3">
+            <div className="flex items-center justify-between mb-3">
+              <div>
+                <p className="text-xs text-gray-500">Jami ({cart.count} ta mahsulot)</p>
+                <p className="text-xl font-bold text-gray-900">{cart.summ.toLocaleString()} so&apos;m</p>
+              </div>
+              <button 
+                onClick={proceedToCheckout} 
+                className="flex items-center gap-2 bg-green-600 hover:bg-green-700 active:bg-green-800 text-white px-6 py-3 rounded-xl font-semibold text-sm transition"
+              >
+                Buyurtma berish
+                <ArrowRight size={18} />
+              </button>
+            </div>
+            <p className="text-xs text-gray-400 text-center">
+              Yetkazib berish narxi keyingi sahifada hisoblanadi
+            </p>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
