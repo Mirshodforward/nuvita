@@ -96,7 +96,8 @@ export default function CheckoutPage() {
     const token = localStorage.getItem("accessToken");
     try {
       await axios.post(`${API_BASE_URL}/order`, {
-        deliveryAddress: `${formData.region}, ${formData.district}, ${formData.address}`,
+        fullName: formData.fullName,
+        address: `${formData.region}, ${formData.district}, ${formData.address}`,
         contactNumber: formData.contactNumber,
         paymentType: formData.paymentType,
       }, {
