@@ -52,9 +52,9 @@ export default function LoginPage() {
       const cleanPhone = phone.replace(/\s+/g, "");
       const res = await axios.post(`${API_BASE_URL}/auth/login`, { number: cleanPhone, password });
       
-      // Save token
-      // Cookies.set('token', res.data.token), localStorage, etc.
+      // Save tokens
       localStorage.setItem("accessToken", res.data.accessToken);
+      localStorage.setItem("refreshToken", res.data.refreshToken);
 
       router.push("/profile");
     } catch (err: any) {

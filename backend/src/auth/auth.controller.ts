@@ -24,4 +24,14 @@ export class AuthController {
   login(@Body() body: any) {
     return this.authService.login(body.number, body.password);
   }
+
+  @Post('refresh')
+  refresh(@Body('refreshToken') refreshToken: string) {
+    return this.authService.refreshTokens(refreshToken);
+  }
+
+  @Post('telegram')
+  telegramAuth(@Body('initData') initData: string) {
+    return this.authService.telegramAuth(initData);
+  }
 }

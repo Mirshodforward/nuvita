@@ -24,6 +24,7 @@ import {
   Globe,
   ArrowLeft
 } from "lucide-react";
+import { getTelegramUser, isTelegramMiniApp } from "@/lib/telegram";
 
 interface UserProfile {
   id: number;
@@ -58,6 +59,7 @@ export default function ProfilePage() {
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
+  const [tgPhotoUrl, setTgPhotoUrl] = useState<string | null>(null);
   
   const [activeTab, setActiveTab] = useState<TabType>('info');
   
@@ -68,6 +70,27 @@ export default function ProfilePage() {
   const router = useRouter();
 
   useEffect(() => {
+    // Get TG photo and user data if in mini app
+    if (isTelegramMiniApp()) {
+      const tgUser = getTelegramUser();
+      if (tgUser?.photo_url) {
+        setTgPhotoUrl(tgUser.photo_url);
+      }
+      
+      // Check for saved TG user data
+      const savedTgData = localStorage.getItem("tgUserData");
+      if (savedTgData) {
+        try {
+          const tgUserData = JSON.parse(savedTgData);
+          if (tgUserData.photoUrl) {
+            setTgPhotoUrl(tgUserData.photoUrl);
+          }
+        } catch (e) {
+          console.error("Error parsing TG user data", e);
+        }
+      }
+    }
+    
     const t = localStorage.getItem("accessToken");
     if (!t) {
       router.push("/login");
@@ -125,6 +148,7 @@ export default function ProfilePage() {
 
   const handleLogout = () => {
     localStorage.removeItem("accessToken");
+    localStorage.removeItem("refreshToken");
     router.push("/");
   };
 
@@ -150,11 +174,22 @@ export default function ProfilePage() {
         {/* Sidebar */}
         <div className="w-full md:w-1/3 lg:w-1/4">
           <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 mb-6 text-center">
-            <div className="w-24 h-24 bg-green-50 rounded-full flex items-center justify-center mx-auto mb-4 text-green-600">
-              <UserCircle size={64} />
-            </div>
+            {tgPhotoUrl ? (
+              <img 
+                src={tgPhotoUrl} 
+                alt="Profile" 
+                className="w-24 h-24 rounded-full object-cover mx-auto mb-4 border-4 border-green-100"
+              />
+            ) : (
+              <div className="w-24 h-24 bg-gradient-to-br from-green-400 to-green-600 rounded-full flex items-center justify-center mx-auto mb-4 text-white text-3xl font-bold">
+                {profile?.fullName?.charAt(0).toUpperCase() || <UserCircle size={64} />}
+              </div>
+            )}
             <h2 className="text-xl font-bold text-gray-800 mb-1">{profile?.fullName || 'Ism kiritilmagan'}</h2>
-            <p className="text-gray-500 font-medium">{profile?.number}</p>
+            {profile?.username && (
+              <p className="text-green-600 font-medium mb-1">@{profile.username}</p>
+            )}
+            <p className="text-gray-500 font-medium">{profile?.number?.startsWith('tg_') ? 'Telegram orqali' : profile?.number}</p>
           </div>
 
           <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">

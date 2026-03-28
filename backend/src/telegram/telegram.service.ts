@@ -1,41 +1,52 @@
 import { Injectable, OnModuleInit, Logger } from '@nestjs/common';
 import { Telegraf, Markup } from 'telegraf';
 import { PrismaService } from '../prisma/prisma.service';
+import * as bcrypt from 'bcryptjs';
 
 @Injectable()
 export class TelegramService implements OnModuleInit {
   private bot: Telegraf;
   private readonly logger = new Logger(TelegramService.name);
+  private readonly MINI_APP_URL: string;
+  private readonly WEBSITE_URL = 'https://nuvita.uz';
 
   constructor(private readonly prisma: PrismaService) {
     this.bot = new Telegraf(
       process.env.TELEGRAM_BOT_TOKEN || '8379782597:AAE4jSnqLDn9dVRkn4bUX2uGGtHsxFNJzZc'
     );
+    this.MINI_APP_URL = process.env.MINI_APP_URL || 'https://t.me/nuvitauzbot/nuvitauz';
   }
 
   onModuleInit() {
+    // /start command handler
     this.bot.start(async (ctx) => {
       const telegramUserId = String(ctx.from.id);
+      
+      // Check if user is registered by TG userId
       const user = await this.prisma.user.findUnique({
         where: { userId: telegramUserId }
       });
 
       if (user) {
-        return this.handleUserRole(ctx, user, user.number);
+        // User is registered - show welcome message based on role
+        return this.handleRegisteredUser(ctx, user);
       }
 
+      // User not registered - ask for contact
       await ctx.reply(
-        "Assalomu alaykum! Tizimdan foydalanish uchun telefon raqamingizni yuboring.",
-        Markup.keyboard([Markup.button.contactRequest('📱 Raqamni yuborish')])
-          .resize()
-          .oneTime(),
+        "👋 Assalomu alaykum!\n\n🏥 Nuvita online dorixonasiga xush kelibsiz!\n\nTizimdan foydalanish uchun telefon raqamingizni yuboring:",
+        Markup.keyboard([
+          [Markup.button.contactRequest('📱 Telefon raqamni yuborish')]
+        ]).resize().oneTime()
       );
     });
 
+    // Contact handler
     this.bot.on('contact', async (ctx) => {
       const contact = ctx.message.contact;
       let phoneNumber = contact.phone_number;
 
+      // Normalize phone number
       if (!phoneNumber.startsWith('+')) {
         phoneNumber = '+' + phoneNumber;
       }
@@ -44,13 +55,13 @@ export class TelegramService implements OnModuleInit {
       const telegramUsername = ctx.from.username || null;
       const telegramFullName = [ctx.from.first_name, ctx.from.last_name].filter(Boolean).join(' ') || null;
 
+      // Check if user exists with this phone number
       let user = await this.prisma.user.findUnique({
         where: { number: phoneNumber },
       });
 
-      const miniAppUrl = process.env.MINI_APP_URL || 'https://t.me/your_bot_username/app';
-
       if (user) {
+        // Phone exists in DB - link TG account and welcome
         user = await this.prisma.user.update({
           where: { number: phoneNumber },
           data: {
@@ -59,14 +70,35 @@ export class TelegramService implements OnModuleInit {
             fullName: user.fullName || telegramFullName,
           },
         });
-        return this.handleUserRole(ctx, user, phoneNumber);
-      } else {
-        const registerUrl = `${miniAppUrl}?register=true&phone=${encodeURIComponent(phoneNumber)}&telegramId=${telegramUserId}&username=${encodeURIComponent(telegramUsername || '')}&fullName=${encodeURIComponent(telegramFullName || '')}`;
+        
         await ctx.reply(
-          "Siz yangi foydalanuvchisiz. Ro'yxatdan o'tish uchun quyidagi tugmani bosing va parol o'rnating:",
-          Markup.inlineKeyboard([ Markup.button.webApp("Yangi profil ochish", registerUrl) ]),
+          `✅ Telegram hisobingiz muvaffaqiyatli bog'landi!`,
+          Markup.removeKeyboard()
         );
+        
+        return this.handleRegisteredUser(ctx, user);
       }
+
+      // New user - redirect to Mini App for password setup
+      const registerParams = new URLSearchParams({
+        mode: 'register',
+        phone: phoneNumber,
+        telegramId: telegramUserId,
+        username: telegramUsername || '',
+        fullName: telegramFullName || '',
+      });
+
+      await ctx.reply(
+        `📝 Siz yangi foydalanuvchisiz!\n\nRo'yxatdan o'tish uchun parol o'rnating.\nBu parol saytga kirishda ishlatiladi.`,
+        Markup.removeKeyboard()
+      );
+
+      await ctx.reply(
+        `👇 Quyidagi tugmani bosib parol o'rnating:`,
+        Markup.inlineKeyboard([
+          [Markup.button.webApp("🔐 Parol o'rnatish", `${this.MINI_APP_URL}?${registerParams.toString()}`)]
+        ])
+      );
     });
 
     // Handling inline buttons for COURIER
@@ -192,21 +224,37 @@ export class TelegramService implements OnModuleInit {
   }
 
   private async handleUserRole(ctx: any, user: any, phoneNumber: string) {      
+    return this.handleRegisteredUser(ctx, user);
+  }
+
+  private async handleRegisteredUser(ctx: any, user: any) {      
+    const displayName = user.fullName || user.number;
+    
     if (user.role === 'ADMIN') {
       await ctx.reply(
-        `Xush kelibsiz Admin, ${user.fullName || phoneNumber}!`,
-        Markup.keyboard([['📊 Yangi buyurtmalar', '📦 Barcha buyurtmalar'], ['👥 Mijozlar', '🛵 Kuryerlar'], ['⚙️ Sozlamalar']]).resize()
+        `🔑 Xush kelibsiz, Admin ${displayName}!`,
+        Markup.keyboard([
+          ['📊 Yangi buyurtmalar', '📦 Barcha buyurtmalar'],
+          ['👥 Mijozlar', '🛵 Kuryerlar'],
+          ['⚙️ Sozlamalar']
+        ]).resize()
       );
     } else if (user.role === 'COURIER') {
       await ctx.reply(
-        `Xush kelibsiz Kuryer, ${user.fullName || phoneNumber}!`,
-        Markup.keyboard([['📦 Yangi buyurtmalar', '✅ Yetkazilganlar'], ['👤 Mening profilim']]).resize()
+        `🛵 Xush kelibsiz, Kuryer ${displayName}!`,
+        Markup.keyboard([
+          ['📦 Yangi buyurtmalar', '✅ Yetkazilganlar'],
+          ['👤 Mening profilim']
+        ]).resize()
       );
     } else {
-      const miniAppUrl = process.env.MINI_APP_URL || 'https://t.me/your_bot_username/app';
+      // Regular USER - show inline button to mini app
       await ctx.reply(
-        `Xush kelibsiz, ${user.fullName || phoneNumber}!\nXaridni davom ettirish uchun ilovaga kiring:`,
-        Markup.inlineKeyboard([Markup.button.webApp("🚀 Nuvita do'koniga kirish", miniAppUrl)]),
+        `🎉 Xush kelibsiz, ${displayName}!\n\n🏥 Nuvita online dorixonasiga xush kelibsiz!\n\nBizda sifatli dori-darmonlar va shifokorlar maslahatlarini olishingiz mumkin.`,
+        Markup.inlineKeyboard([
+          [Markup.button.webApp("🛒 Boshla", this.MINI_APP_URL)],
+          [Markup.button.url("🌐 Saytga o'tish", this.WEBSITE_URL)]
+        ])
       );
     }
   }

@@ -22,16 +22,17 @@ async function bootstrap() {
 
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
 
+  app.setGlobalPrefix('api');
+
+  // Static assets should be served under /api/ProductPhoto to match API_BASE_URL
   app.useStaticAssets(join(__dirname, '..', 'ProductPhoto'), {
-    prefix: '/ProductPhoto/',
+    prefix: '/api/ProductPhoto/',
   });
 
   app.enableCors({
     origin: getAllowedOrigins(),
     credentials: true,
   });
-
-  app.setGlobalPrefix('api');
 
   await app.listen(process.env.PORT ?? 3001);
 }
