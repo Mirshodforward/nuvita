@@ -1,7 +1,7 @@
 "use client";
 
 import Link from 'next/link';
-import { useEffect, useState, useRef, useCallback } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import axios from 'axios';
 import { API_BASE_URL } from "@/lib/api";
 import { useRouter, usePathname } from 'next/navigation';
@@ -178,11 +178,6 @@ export function Header() {
     }
   }, [isSearchOpen]);
 
-  // Hide header on admin/profile pages
-  if (pathname.startsWith('/admin') || pathname.startsWith('/profile')) {       
-    return null;
-  }
-
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
     if (searchQuery.trim()) {
@@ -193,9 +188,14 @@ export function Header() {
     }
   };
 
-  const toggleSearch = useCallback(() => {
+  const toggleSearch = () => {
     setIsSearchOpen(prev => !prev);
-  }, []);
+  };
+
+  // Hide header on admin/profile pages
+  if (pathname.startsWith('/admin') || pathname.startsWith('/profile')) {       
+    return null;
+  }
 
   const displayName = profile?.fullName || profile?.number || "Profil";
 
