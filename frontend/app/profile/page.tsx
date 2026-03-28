@@ -54,66 +54,62 @@ interface Order {
 type TabType = 'info' | 'orders' | 'settings';
 
 export default function ProfilePage() {
+  const router = useRouter();
+  
   const [token, setToken] = useState<string | null>(null);
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [tgPhotoUrl, setTgPhotoUrl] = useState<string | null>(null);
-  
   const [activeTab, setActiveTab] = useState<TabType>('info');
-  
-  // Edit logic
   const [isEditing, setIsEditing] = useState(false);
   const [formData, setFormData] = useState<Partial<UserProfile>>({});
 
-  const router = useRouter();
-
   useEffect(() => {
-    // Check if in TG Mini App
-    const inTg = isTelegramMiniApp();
+    let inTg = false;
+    
+    if (typeof window !== 'undefined') {
+      inTg = isTelegramMiniApp();
 
-    if (inTg) {
-      const webApp = getTelegramWebApp();
-      
-      // Configure BackButton
-      if (webApp?.BackButton) {
-        webApp.BackButton.show();
-        webApp.BackButton.onClick(() => {
-          router.push('/');
-        });
-      }
+      if (inTg) {
+        const webApp = getTelegramWebApp();
+        
+        if (webApp?.BackButton) {
+          webApp.BackButton.show();
+          webApp.BackButton.onClick(() => {
+            router.push('/');
+          });
+        }
 
-      // Get TG photo
-      const tgUser = getTelegramUser();
-      if (tgUser?.photo_url) {
-        setTgPhotoUrl(tgUser.photo_url);
-      }
-      
-      // Check for saved TG user data
-      const savedTgData = localStorage.getItem("tgUserData");
-      if (savedTgData) {
-        try {
-          const tgUserData = JSON.parse(savedTgData);
-          if (tgUserData.photoUrl) {
-            setTgPhotoUrl(tgUserData.photoUrl);
+        const tgUser = getTelegramUser();
+        if (tgUser?.photo_url) {
+          setTgPhotoUrl(tgUser.photo_url);
+        }
+        
+        const savedTgData = localStorage.getItem("tgUserData");
+        if (savedTgData) {
+          try {
+            const tgUserData = JSON.parse(savedTgData);
+            if (tgUserData.photoUrl) {
+              setTgPhotoUrl(tgUserData.photoUrl);
+            }
+          } catch (e) {
+            console.error("Error parsing TG user data", e);
           }
-        } catch (e) {
-          console.error("Error parsing TG user data", e);
         }
       }
+      
+      const t = localStorage.getItem("accessToken");
+      if (!t) {
+        router.push("/login");
+        return;
+      }
+      setToken(t);
+      fetchData(t);
     }
-    
-    const t = localStorage.getItem("accessToken");
-    if (!t) {
-      router.push("/login");
-      return;
-    }
-    setToken(t);
-    fetchData(t);
 
-    // Cleanup BackButton on unmount
     return () => {
-      if (inTg) {
+      if (inTg && typeof window !== 'undefined') {
         const webApp = getTelegramWebApp();
         webApp?.BackButton?.hide();
       }
@@ -155,15 +151,15 @@ export default function ProfilePage() {
     }
   };
 
-  const mapStatus = (status: string) => {
-    const sMap: Record<string, { label: string, color: string, icon: React.ReactNode }> = {
+  const getStatusInfo = (status: string) => {
+    const statusMap: Record<string, { label: string; color: string; icon: React.ReactNode }> = {
       NEW: { label: "Yangi", color: "bg-blue-100 text-blue-800", icon: <Clock size={16} /> },
       ACCEPTED: { label: "Qabul qilingan", color: "bg-indigo-100 text-indigo-800", icon: <CheckCircle size={16} /> },
       ON_THE_WAY: { label: "Yo'lda", color: "bg-yellow-100 text-yellow-800", icon: <Truck size={16} /> },
       DELIVERED: { label: "Yetkazilgan", color: "bg-green-100 text-green-800", icon: <CheckCircle size={16} /> },
       CANCELLED: { label: "Bekor qilingan", color: "bg-red-100 text-red-800", icon: <XCircle size={16} /> }
     };
-    return sMap[status] || { label: status, color: "bg-gray-100 text-gray-800", icon: <Package size={16} /> };
+    return statusMap[status] || { label: status, color: "bg-gray-100 text-gray-800", icon: <Package size={16} /> };
   };
 
   const handleLogout = () => {
@@ -183,9 +179,7 @@ export default function ProfilePage() {
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-        
         <div className="flex flex-col md:flex-row gap-6">
-          
           {/* Sidebar */}
           <div className="w-full md:w-1/3 lg:w-1/4">
             <div className="bg-white border border-gray-100 rounded-2xl shadow-sm p-6 mb-4 text-center">
@@ -222,7 +216,7 @@ export default function ProfilePage() {
               >
                 <div className="flex items-center gap-3 font-medium text-sm">
                   <UserCircle size={18} />
-                  Shaxsiy ma'lumotlar
+                  Shaxsiy ma&apos;lumotlar
                 </div>
                 <ChevronRight size={16} className={activeTab === 'info' ? 'text-green-600' : 'opacity-40'} />
               </button>
@@ -272,274 +266,270 @@ export default function ProfilePage() {
             </div>
           </div>
 
-        {/* Content Area */}
-        <div className="w-full md:w-2/3 lg:w-3/4">
-          
-          {/* TAB: INFO */}
-          {activeTab === 'info' && (
-            <div className="bg-white border border-gray-100 rounded-2xl shadow-sm p-5 sm:p-6">
-              <div className="flex justify-between items-center mb-5 pb-4 border-b border-gray-100">
-                <h3 className="text-xl font-bold text-gray-800">
-                  Shaxsiy ma'lumotlar
-                </h3>
-                {!isEditing ? (
-                  <button 
-                    onClick={() => setIsEditing(true)} 
-                    className="flex items-center gap-2 text-sm font-medium text-blue-600 bg-blue-500/10 py-2 px-3 rounded-lg hover:bg-blue-500/20 transition-colors"
-                  >
-                    <Edit2 size={14} /> Tahrirlash
-                  </button>
+          {/* Content Area */}
+          <div className="w-full md:w-2/3 lg:w-3/4">
+            {/* TAB: INFO */}
+            {activeTab === 'info' && (
+              <div className="bg-white border border-gray-100 rounded-2xl shadow-sm p-5 sm:p-6">
+                <div className="flex justify-between items-center mb-5 pb-4 border-b border-gray-100">
+                  <h3 className="text-xl font-bold text-gray-800">Shaxsiy ma&apos;lumotlar</h3>
+                  {!isEditing ? (
+                    <button 
+                      onClick={() => setIsEditing(true)} 
+                      className="flex items-center gap-2 text-sm font-medium text-blue-600 bg-blue-500/10 py-2 px-3 rounded-lg hover:bg-blue-500/20 transition-colors"
+                    >
+                      <Edit2 size={14} /> Tahrirlash
+                    </button>
+                  ) : (
+                    <div className="flex gap-2">
+                      <button 
+                        onClick={() => setIsEditing(false)} 
+                        className="flex items-center gap-1.5 text-sm font-medium text-gray-600 bg-gray-100 py-2 px-3 rounded-lg hover:bg-gray-200 transition-colors"
+                      >
+                        <X size={14} /> Bekor
+                      </button>
+                      <button 
+                        onClick={() => handleUpdate(formData)} 
+                        className="flex items-center gap-1.5 text-sm font-medium text-white bg-green-600 py-2 px-3 rounded-lg hover:bg-green-500 transition-colors"
+                      >
+                        <Save size={14} /> Saqlash
+                      </button>
+                    </div>
+                  )}
+                </div>
+
+                {isEditing ? (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-1.5">
+                      <label className="text-sm font-medium text-gray-700">Ism Familiya</label>
+                      <input 
+                        type="text" 
+                        className="w-full border rounded-xl px-4 py-3 focus:ring-2 focus:ring-green-500 outline-none transition-all"
+                        value={formData.fullName || ''}
+                        onChange={e => setFormData({...formData, fullName: e.target.value})}
+                        placeholder="Masalan: Aliyev Vali"
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="text-sm font-medium text-gray-700">Telefon raqam</label>
+                      <input 
+                        type="text" 
+                        disabled
+                        className="w-full border-gray-200 bg-gray-50 text-gray-500 rounded-xl px-4 py-3 cursor-not-allowed"
+                        value={profile?.number || ''}
+                      />
+                    </div>
+                    <div className="space-y-1.5 md:col-span-2">
+                      <label className="text-sm font-medium text-gray-700">Manzil</label>
+                      <input 
+                        type="text" 
+                        className="w-full border rounded-xl px-4 py-3 focus:ring-2 focus:ring-green-500 outline-none transition-all"
+                        value={formData.address || ''}
+                        onChange={e => setFormData({...formData, address: e.target.value})}
+                        placeholder="Shahar, Tuman, Ko'cha..."
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="text-sm font-medium text-gray-700">Tug&apos;ilgan sana</label>
+                      <input 
+                        type="date" 
+                        className="w-full border rounded-xl px-4 py-3 focus:ring-2 focus:ring-green-500 outline-none transition-all"
+                        value={formData.dateOfBirth ? formData.dateOfBirth.split('T')[0] : ''}
+                        onChange={e => setFormData({...formData, dateOfBirth: e.target.value ? new Date(e.target.value).toISOString() : null})}
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="text-sm font-medium text-gray-700">Jinsi</label>
+                      <select 
+                        className="w-full border rounded-xl px-4 py-3 focus:ring-2 focus:ring-green-500 outline-none transition-all"
+                        value={formData.gender || ''}
+                        onChange={e => setFormData({...formData, gender: e.target.value})}
+                      >
+                        <option value="">Tanlang</option>
+                        <option value="MALE">Erkak</option>
+                        <option value="FEMALE">Ayol</option>
+                      </select>
+                    </div>
+                  </div>
                 ) : (
-                  <div className="flex gap-2">
-                    <button 
-                      onClick={() => setIsEditing(false)} 
-                      className="flex items-center gap-1.5 text-sm font-medium text-gray-600 bg-gray-100 py-2 px-3 rounded-lg hover:bg-gray-200 transition-colors"
-                    >
-                      <X size={14} /> Bekor
-                    </button>
-                    <button 
-                      onClick={() => handleUpdate(formData)} 
-                      className="flex items-center gap-1.5 text-sm font-medium text-white bg-green-600 py-2 px-3 rounded-lg hover:bg-green-500 transition-colors"
-                    >
-                      <Save size={14} /> Saqlash
-                    </button>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div className="bg-gray-50 p-4 rounded-xl flex items-center gap-4">
+                      <div className="p-2.5 bg-blue-500/10 text-blue-500 rounded-lg"><UserCircle size={22} /></div>
+                      <div className="min-w-0 flex-1">
+                        <p className="text-xs font-medium mb-0.5 text-gray-500">Ism Familiya</p>
+                        <p className="font-semibold truncate text-gray-800">{profile?.fullName || "Kiritilmagan"}</p>
+                      </div>
+                    </div>
+                    <div className="bg-gray-50 p-4 rounded-xl flex items-center gap-4">
+                      <div className="p-2.5 bg-green-500/10 text-green-500 rounded-lg"><Phone size={22} /></div>
+                      <div className="min-w-0 flex-1">
+                        <p className="text-xs font-medium mb-0.5 text-gray-500">Telefon raqam</p>
+                        <p className="font-semibold truncate text-gray-800">{profile?.number}</p>
+                      </div>
+                    </div>
+                    <div className="bg-gray-50 p-4 rounded-xl flex items-center gap-4 sm:col-span-2">
+                      <div className="p-2.5 bg-red-500/10 text-red-500 rounded-lg"><MapPin size={22} /></div>
+                      <div className="min-w-0 flex-1">
+                        <p className="text-xs font-medium mb-0.5 text-gray-500">Manzil</p>
+                        <p className="font-semibold truncate text-gray-800">{profile?.address || "Kiritilmagan"}</p>
+                      </div>
+                    </div>
+                    <div className="bg-gray-50 p-4 rounded-xl flex items-center gap-4">
+                      <div className="p-2.5 bg-purple-500/10 text-purple-500 rounded-lg"><Calendar size={22} /></div>
+                      <div className="min-w-0 flex-1">
+                        <p className="text-xs font-medium mb-0.5 text-gray-500">Tug&apos;ilgan sana</p>
+                        <p className="font-semibold text-gray-800">
+                          {profile?.dateOfBirth ? new Date(profile.dateOfBirth).toLocaleDateString('uz-UZ') : "Kiritilmagan"}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="bg-gray-50 p-4 rounded-xl flex items-center gap-4">
+                      <div className="p-2.5 bg-orange-500/10 text-orange-500 rounded-lg"><UserCircle size={22} /></div>
+                      <div className="min-w-0 flex-1">
+                        <p className="text-xs font-medium mb-0.5 text-gray-500">Jinsi</p>
+                        <p className="font-semibold text-gray-800">
+                          {profile?.gender === 'MALE' ? 'Erkak' : profile?.gender === 'FEMALE' ? 'Ayol' : "Kiritilmagan"}
+                        </p>
+                      </div>
+                    </div>
                   </div>
                 )}
               </div>
+            )}
 
-              {isEditing ? (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-1.5">
-                    <label className="text-sm font-medium text-gray-700">Ism Familiya</label>
-                    <input 
-                      type="text" 
-                      className="w-full border rounded-xl px-4 py-3 focus:ring-2 focus:ring-green-500 outline-none transition-all"
-                      value={formData.fullName || ''}
-                      onChange={e => setFormData({...formData, fullName: e.target.value})}
-                      placeholder="Masalan: Aliyev Vali"
-                    />
-                  </div>
-                  <div className="space-y-1.5">
-                    <label className="text-sm font-medium text-gray-700">Telefon raqam</label>
-                    <input 
-                      type="text" 
-                      disabled
-                      className="w-full border-gray-200 bg-gray-50 text-gray-500 rounded-xl px-4 py-3 cursor-not-allowed"
-                      value={profile?.number || ''}
-                    />
-                  </div>
-                  <div className="space-y-1.5 md:col-span-2">
-                    <label className="text-sm font-medium text-gray-700">Manzil</label>
-                    <input 
-                      type="text" 
-                      className="w-full border rounded-xl px-4 py-3 focus:ring-2 focus:ring-green-500 outline-none transition-all"
-                      value={formData.address || ''}
-                      onChange={e => setFormData({...formData, address: e.target.value})}
-                      placeholder="Shahar, Tuman, Ko'cha..."
-                    />
-                  </div>
-                  <div className="space-y-1.5">
-                    <label className="text-sm font-medium text-gray-700">Tug'ilgan sana</label>
-                    <input 
-                      type="date" 
-                      className="w-full border rounded-xl px-4 py-3 focus:ring-2 focus:ring-green-500 outline-none transition-all"
-                      value={formData.dateOfBirth ? formData.dateOfBirth.split('T')[0] : ''}
-                      onChange={e => setFormData({...formData, dateOfBirth: e.target.value ? new Date(e.target.value).toISOString() : null})}
-                    />
-                  </div>
-                  <div className="space-y-1.5">
-                    <label className="text-sm font-medium text-gray-700">Jinsi</label>
-                    <select 
-                      className="w-full border rounded-xl px-4 py-3 focus:ring-2 focus:ring-green-500 outline-none transition-all"
-                      value={formData.gender || ''}
-                      onChange={e => setFormData({...formData, gender: e.target.value})}
+            {/* TAB: ORDERS */}
+            {activeTab === 'orders' && (
+              <div className="bg-white border border-gray-100 rounded-2xl shadow-sm p-5 sm:p-6 min-h-[400px]">
+                <div className="pb-4 mb-5 border-b border-gray-100">
+                  <h3 className="text-xl font-bold text-gray-800">Buyurtmalarim</h3>
+                  <p className="text-sm mt-1 text-gray-500">Barcha xaridlar tarixi</p>
+                </div>
+
+                {orders.length === 0 ? (
+                  <div className="text-center py-12">
+                    <div className="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mx-auto mb-4">
+                      <Package size={32} className="text-gray-300" />
+                    </div>
+                    <h4 className="text-lg font-bold mb-2 text-gray-700">Buyurtmalar yo&apos;q</h4>
+                    <p className="text-sm mb-5 max-w-xs mx-auto text-gray-500">
+                      Siz hali hech narsa buyurtma qilmadingiz.
+                    </p>
+                    <button 
+                      onClick={() => router.push('/')}
+                      className="bg-green-600 text-white font-medium px-5 py-2.5 rounded-xl hover:bg-green-500 transition-colors text-sm"
                     >
-                      <option value="">Tanlang</option>
-                      <option value="MALE">Erkak</option>
-                      <option value="FEMALE">Ayol</option>
-                    </select>
+                      Xarid qilish
+                    </button>
                   </div>
-                </div>
-              ) : (
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <div className="bg-gray-50 p-4 rounded-xl flex items-center gap-4">
-                    <div className="p-2.5 bg-blue-500/10 text-blue-500 rounded-lg"><UserCircle size={22} /></div>
-                    <div className="min-w-0 flex-1">
-                      <p className="text-xs font-medium mb-0.5 text-gray-500">Ism Familiya</p>
-                      <p className="font-semibold truncate text-gray-800">{profile?.fullName || "Kiritilmagan"}</p>
-                    </div>
-                  </div>
-                  <div className="bg-gray-50 p-4 rounded-xl flex items-center gap-4">
-                    <div className="p-2.5 bg-green-500/10 text-green-500 rounded-lg"><Phone size={22} /></div>
-                    <div className="min-w-0 flex-1">
-                      <p className="text-xs font-medium mb-0.5 text-gray-500">Telefon raqam</p>
-                      <p className="font-semibold truncate text-gray-800">{profile?.number}</p>
-                    </div>
-                  </div>
-                  <div className="bg-gray-50 p-4 rounded-xl flex items-center gap-4 sm:col-span-2">
-                    <div className="p-2.5 bg-red-500/10 text-red-500 rounded-lg"><MapPin size={22} /></div>
-                    <div className="min-w-0 flex-1">
-                      <p className="text-xs font-medium mb-0.5 text-gray-500">Manzil</p>
-                      <p className="font-semibold truncate text-gray-800">{profile?.address || "Kiritilmagan"}</p>
-                    </div>
-                  </div>
-                  <div className="bg-gray-50 p-4 rounded-xl flex items-center gap-4">
-                    <div className="p-2.5 bg-purple-500/10 text-purple-500 rounded-lg"><Calendar size={22} /></div>
-                    <div className="min-w-0 flex-1">
-                      <p className="text-xs font-medium mb-0.5 text-gray-500">Tug'ilgan sana</p>
-                      <p className="font-semibold text-gray-800">
-                        {profile?.dateOfBirth ? new Date(profile.dateOfBirth).toLocaleDateString('uz-UZ') : "Kiritilmagan"}
-                      </p>
-                    </div>
-                  </div>
-                  <div className="bg-gray-50 p-4 rounded-xl flex items-center gap-4">
-                    <div className="p-2.5 bg-orange-500/10 text-orange-500 rounded-lg"><UserCircle size={22} /></div>
-                    <div className="min-w-0 flex-1">
-                      <p className="text-xs font-medium mb-0.5 text-gray-500">Jinsi</p>
-                      <p className="font-semibold text-gray-800">
-                        {profile?.gender === 'MALE' ? 'Erkak' : profile?.gender === 'FEMALE' ? 'Ayol' : "Kiritilmagan"}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              )}
-            </div>
-          )}
+                ) : (
+                  <div className="space-y-3">
+                    {orders.map((order) => {
+                      const st = getStatusInfo(order.orderStatus);
+                      return (
+                        <div key={order.id} className="border border-gray-100 bg-white rounded-xl p-4">
+                          <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-3 mb-3 pb-3 border-b border-gray-100">
+                            <div>
+                              <div className="flex items-center gap-2 flex-wrap">
+                                <span className="font-bold text-gray-800">#{order.id}</span>
+                                <span className={`px-2 py-0.5 rounded-full text-xs font-semibold flex items-center gap-1 ${st.color}`}>
+                                  {st.icon} {st.label}
+                                </span>
+                              </div>
+                              <div className="text-xs mt-1 flex items-center gap-1.5 text-gray-500">
+                                <Calendar size={12} /> 
+                                {new Date(order.createdAt).toLocaleString('uz-UZ', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}
+                              </div>
+                            </div>
+                            <div className="text-left sm:text-right">
+                              <div className="font-bold text-green-600">
+                                {(order.summ + order.deliverySumm).toLocaleString()} so&apos;m
+                              </div>
+                              <div className="text-xs text-blue-500 font-medium">
+                                {order.paymentType}
+                              </div>
+                            </div>
+                          </div>
 
-          {/* TAB: ORDERS */}
-          {activeTab === 'orders' && (
-            <div className="bg-white border border-gray-100 rounded-2xl shadow-sm p-5 sm:p-6 min-h-[400px]">
-              <div className="pb-4 mb-5 border-b border-gray-100">
-                <h3 className="text-xl font-bold text-gray-800">Buyurtmalarim</h3>
-                <p className="text-sm mt-1 text-gray-500">Barcha xaridlar tarixi</p>
-              </div>
-
-              {orders.length === 0 ? (
-                <div className="text-center py-12">
-                  <div className="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mx-auto mb-4">
-                    <Package size={32} className="text-gray-300" />
-                  </div>
-                  <h4 className="text-lg font-bold mb-2 text-gray-700">Buyurtmalar yo'q</h4>
-                  <p className="text-sm mb-5 max-w-xs mx-auto text-gray-500">
-                    Siz hali hech narsa buyurtma qilmadingiz.
-                  </p>
-                  <button 
-                    onClick={() => router.push('/')}
-                    className="bg-green-600 text-white font-medium px-5 py-2.5 rounded-xl hover:bg-green-500 transition-colors text-sm"
-                  >
-                    Xarid qilish
-                  </button>
-                </div>
-              ) : (
-                <div className="space-y-3">
-                  {orders.map((order) => {
-                    const st = mapStatus(order.orderStatus);
-                    return (
-                      <div key={order.id} className="border border-gray-100 bg-white rounded-xl p-4">
-                        <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-3 mb-3 pb-3 border-b border-gray-100">
-                          <div>
-                            <div className="flex items-center gap-2 flex-wrap">
-                              <span className="font-bold text-gray-800">#{order.id}</span>
-                              <span className={`px-2 py-0.5 rounded-full text-xs font-semibold flex items-center gap-1 ${st.color}`}>
-                                {st.icon} {st.label}
+                          <div className="flex flex-wrap gap-1.5 mb-2">
+                            {order.productItems?.slice(0, 3).map((item, idx) => (
+                              <div key={idx} className="bg-gray-50 border border-gray-100 flex items-center gap-1.5 rounded-lg pr-2 pl-1 py-1 text-xs">
+                                {item.photoUrl ? (
+                                  <img src={item.photoUrl.startsWith('/') ? `${API_BASE_URL}${item.photoUrl}` : `${API_BASE_URL}/ProductPhoto/${item.photoUrl}`} alt="p" className="w-6 h-6 rounded object-cover" />
+                                ) : (
+                                  <div className="w-6 h-6 rounded bg-gray-200 flex items-center justify-center"><Package size={12} className="text-gray-400"/></div>
+                                )}
+                                <span className="font-medium truncate max-w-[80px] text-gray-800">{item.name}</span>
+                                <span className="text-gray-500">×{item.count}</span>
+                              </div>
+                            ))}
+                            {order.productItems?.length > 3 && (
+                              <span className="bg-gray-50 text-gray-500 px-2 py-1 rounded-lg text-xs font-medium">
+                                +{order.productItems.length - 3}
                               </span>
-                            </div>
-                            <div className="text-xs mt-1 flex items-center gap-1.5 text-gray-500">
-                              <Calendar size={12} /> 
-                              {new Date(order.createdAt).toLocaleString('uz-UZ', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}
-                            </div>
+                            )}
                           </div>
-                          <div className="text-left sm:text-right">
-                            <div className="font-bold text-green-600">
-                              {(order.summ + order.deliverySumm).toLocaleString()} so'm
-                            </div>
-                            <div className="text-xs text-blue-500 font-medium">
-                              {order.paymentType}
-                            </div>
+                          
+                          <div className="bg-blue-50 text-blue-600 flex items-center gap-1.5 text-xs p-2 rounded-lg">
+                            <MapPin size={12} />
+                            <span className="truncate">{order.address}</span>
                           </div>
                         </div>
-
-                        <div className="flex flex-wrap gap-1.5 mb-2">
-                          {order.productItems?.slice(0, 3).map((item, idx) => (
-                            <div key={idx} className="bg-gray-50 border border-gray-100 flex items-center gap-1.5 rounded-lg pr-2 pl-1 py-1 text-xs">
-                              {item.photoUrl ? (
-                                <img src={item.photoUrl.startsWith('/') ? `${API_BASE_URL}${item.photoUrl}` : `${API_BASE_URL}/ProductPhoto/${item.photoUrl}`} alt="p" className="w-6 h-6 rounded object-cover" />
-                              ) : (
-                                <div className="w-6 h-6 rounded bg-gray-200 flex items-center justify-center"><Package size={12} className="text-gray-400"/></div>
-                              )}
-                              <span className="font-medium truncate max-w-[80px] text-gray-800">{item.name}</span>
-                              <span className="text-gray-500">×{item.count}</span>
-                            </div>
-                          ))}
-                          {order.productItems?.length > 3 && (
-                            <span className="bg-gray-50 text-gray-500 px-2 py-1 rounded-lg text-xs font-medium">
-                              +{order.productItems.length - 3}
-                            </span>
-                          )}
-                        </div>
-                        
-                        <div className="bg-blue-50 text-blue-600 flex items-center gap-1.5 text-xs p-2 rounded-lg">
-                          <MapPin size={12} />
-                          <span className="truncate">{order.address}</span>
-                        </div>
-                      </div>
-                    )
-                  })}
-                </div>
-              )}
-            </div>
-          )}
-          
-          {/* TAB: SETTINGS */}
-          {activeTab === 'settings' && (
-            <div className="bg-white border border-gray-100 rounded-2xl shadow-sm p-5 sm:p-6 min-h-[400px]">
-              <div className="pb-4 mb-5 border-b border-gray-100">
-                <h3 className="text-xl font-bold text-gray-800">Sozlamalar</h3>
-                <p className="text-sm mt-1 text-gray-500">Sayt tilini o'zgartirish</p>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
+            )}
+            
+            {/* TAB: SETTINGS */}
+            {activeTab === 'settings' && (
+              <div className="bg-white border border-gray-100 rounded-2xl shadow-sm p-5 sm:p-6 min-h-[400px]">
+                <div className="pb-4 mb-5 border-b border-gray-100">
+                  <h3 className="text-xl font-bold text-gray-800">Sozlamalar</h3>
+                  <p className="text-sm mt-1 text-gray-500">Sayt tilini o&apos;zgartirish</p>
+                </div>
 
-              <div className="space-y-4">
-                <div className="bg-gray-50 border border-gray-100 rounded-xl p-5">
-                  <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-                    <div className="flex gap-3">
-                      <div className="p-2.5 rounded-lg bg-blue-500/10 text-blue-500 h-fit">
-                        <Globe size={22} />
+                <div className="space-y-4">
+                  <div className="bg-gray-50 border border-gray-100 rounded-xl p-5">
+                    <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                      <div className="flex gap-3">
+                        <div className="p-2.5 rounded-lg bg-blue-500/10 text-blue-500 h-fit">
+                          <Globe size={22} />
+                        </div>
+                        <div>
+                          <h4 className="font-bold mb-0.5 text-gray-800">Til</h4>
+                          <p className="text-xs text-gray-500">Interfeys tili</p>
+                        </div>
                       </div>
-                      <div>
-                        <h4 className="font-bold mb-0.5 text-gray-800">Til</h4>
-                        <p className="text-xs text-gray-500">Interfeys tili</p>
+                      
+                      <div className="flex flex-wrap gap-2 w-full sm:w-auto">
+                        <button 
+                          onClick={() => handleUpdate({ lang: 'UZ' }, false)}
+                          className={`flex-1 sm:flex-none px-3 py-2 rounded-lg text-sm font-medium transition-all ${profile?.lang === 'UZ' ? 'bg-green-600 text-white' : 'bg-white text-gray-700 border hover:bg-gray-50'}`}
+                        >
+                          🇺🇿 O&apos;zbek
+                        </button>
+                        <button 
+                          onClick={() => handleUpdate({ lang: 'RU' }, false)}
+                          className={`flex-1 sm:flex-none px-3 py-2 rounded-lg text-sm font-medium transition-all ${profile?.lang === 'RU' ? 'bg-green-600 text-white' : 'bg-white text-gray-700 border hover:bg-gray-50'}`}
+                        >
+                          🇷🇺 Русский
+                        </button>
+                        <button 
+                          onClick={() => handleUpdate({ lang: 'EN' }, false)}
+                          className={`flex-1 sm:flex-none px-3 py-2 rounded-lg text-sm font-medium transition-all ${profile?.lang === 'EN' ? 'bg-green-600 text-white' : 'bg-white text-gray-700 border hover:bg-gray-50'}`}
+                        >
+                          🇬🇧 English
+                        </button>
                       </div>
-                    </div>
-                    
-                    <div className="flex flex-wrap gap-2 w-full sm:w-auto">
-                      <button 
-                        onClick={() => handleUpdate({ lang: 'UZ' }, false)}
-                        className={`flex-1 sm:flex-none px-3 py-2 rounded-lg text-sm font-medium transition-all ${profile?.lang === 'UZ' ? 'bg-green-600 text-white' : 'bg-white text-gray-700 border hover:bg-gray-50'}`}
-                      >
-                        🇺🇿 O'zbek
-                      </button>
-                      <button 
-                        onClick={() => handleUpdate({ lang: 'RU' }, false)}
-                        className={`flex-1 sm:flex-none px-3 py-2 rounded-lg text-sm font-medium transition-all ${profile?.lang === 'RU' ? 'bg-green-600 text-white' : 'bg-white text-gray-700 border hover:bg-gray-50'}`}
-                      >
-                        🇷🇺 Русский
-                      </button>
-                      <button 
-                        onClick={() => handleUpdate({ lang: 'EN' }, false)}
-                        className={`flex-1 sm:flex-none px-3 py-2 rounded-lg text-sm font-medium transition-all ${profile?.lang === 'EN' ? 'bg-green-600 text-white' : 'bg-white text-gray-700 border hover:bg-gray-50'}`}
-                      >
-                        🇬🇧 English
-                      </button>
                     </div>
                   </div>
                 </div>
               </div>
-            </div>
-          )}
-
+            )}
+          </div>
         </div>
       </div>
     </div>
-  </div>
   );
 }
