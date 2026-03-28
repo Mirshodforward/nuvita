@@ -15,6 +15,7 @@ export interface WebAppInitData {
   user?: TelegramUser;
   auth_date: number;
   hash: string;
+  start_param?: string; // startapp parameter from Mini App link
 }
 
 export interface TelegramWebApp {

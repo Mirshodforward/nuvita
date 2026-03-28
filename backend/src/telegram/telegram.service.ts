@@ -2,6 +2,15 @@ import { Injectable, OnModuleInit, Logger } from '@nestjs/common';
 import { Telegraf, Markup } from 'telegraf';
 import { PrismaService } from '../prisma/prisma.service';
 import * as bcrypt from 'bcryptjs';
+import * as crypto from 'crypto';
+
+interface RegistrationToken {
+  phone: string;
+  telegramId: string;
+  username: string;
+  fullName: string;
+  createdAt: number;
+}
 
 @Injectable()
 export class TelegramService implements OnModuleInit {
@@ -9,12 +18,51 @@ export class TelegramService implements OnModuleInit {
   private readonly logger = new Logger(TelegramService.name);
   private readonly MINI_APP_URL: string;
   private readonly WEBSITE_URL = 'https://nuvita.uz';
+  
+  // Registration tokens storage (expires after 1 hour)
+  private registrationTokens = new Map<string, RegistrationToken>();
+  private readonly TOKEN_EXPIRY = 60 * 60 * 1000; // 1 hour
 
   constructor(private readonly prisma: PrismaService) {
     this.bot = new Telegraf(
       process.env.TELEGRAM_BOT_TOKEN || '8379782597:AAE4jSnqLDn9dVRkn4bUX2uGGtHsxFNJzZc'
     );
-    this.MINI_APP_URL = process.env.MINI_APP_URL || 'https://t.me/nuvitauzbot/nuvitauz';
+    this.MINI_APP_URL = process.env.MINI_APP_URL || 'https://nuvita.uz';
+    
+    // Clean up expired tokens every 10 minutes
+    setInterval(() => this.cleanupExpiredTokens(), 10 * 60 * 1000);
+  }
+
+  private generateToken(): string {
+    return crypto.randomBytes(6).toString('hex'); // 12 character token
+  }
+
+  private cleanupExpiredTokens() {
+    const now = Date.now();
+    for (const [token, data] of this.registrationTokens.entries()) {
+      if (now - data.createdAt > this.TOKEN_EXPIRY) {
+        this.registrationTokens.delete(token);
+      }
+    }
+  }
+
+  // Public method to validate and get token data
+  public getRegistrationToken(token: string): RegistrationToken | null {
+    const data = this.registrationTokens.get(token);
+    if (!data) return null;
+    
+    // Check if expired
+    if (Date.now() - data.createdAt > this.TOKEN_EXPIRY) {
+      this.registrationTokens.delete(token);
+      return null;
+    }
+    
+    return data;
+  }
+
+  // Delete token after successful registration
+  public deleteRegistrationToken(token: string) {
+    this.registrationTokens.delete(token);
   }
 
   onModuleInit() {
@@ -79,13 +127,14 @@ export class TelegramService implements OnModuleInit {
         return this.handleRegisteredUser(ctx, user);
       }
 
-      // New user - redirect to Mini App for password setup
-      const registerParams = new URLSearchParams({
-        mode: 'register',
+      // New user - generate registration token and send Mini App link
+      const token = this.generateToken();
+      this.registrationTokens.set(token, {
         phone: phoneNumber,
         telegramId: telegramUserId,
         username: telegramUsername || '',
         fullName: telegramFullName || '',
+        createdAt: Date.now(),
       });
 
       await ctx.reply(
@@ -93,10 +142,12 @@ export class TelegramService implements OnModuleInit {
         Markup.removeKeyboard()
       );
 
+      // Send one-time link to Mini App
+      const miniAppLink = `https://t.me/nuvitauzbot/nuvitauz?startapp=${token}`;
       await ctx.reply(
-        `👇 Quyidagi tugmani bosib parol o'rnating:`,
+        `👇 Quyidagi havola orqali parol o'rnating:\n\n${miniAppLink}\n\n⏱ Havola 1 soat amal qiladi.`,
         Markup.inlineKeyboard([
-          [Markup.button.webApp("🔐 Parol o'rnatish", `${this.MINI_APP_URL}?${registerParams.toString()}`)]
+          [Markup.button.url("🔐 Parol o'rnatish", miniAppLink)]
         ])
       );
     });
@@ -252,8 +303,7 @@ export class TelegramService implements OnModuleInit {
       await ctx.reply(
         `🎉 Xush kelibsiz, ${displayName}!\n\n🏥 Nuvita online dorixonasiga xush kelibsiz!\n\nBizda sifatli dori-darmonlar va shifokorlar maslahatlarini olishingiz mumkin.`,
         Markup.inlineKeyboard([
-          [Markup.button.webApp("🛒 Boshla", this.MINI_APP_URL)],
-          [Markup.button.url("🌐 Saytga o'tish", this.WEBSITE_URL)]
+          [Markup.button.webApp("🛒 Do'konga kirish", this.MINI_APP_URL)]
         ])
       );
     }

@@ -1,9 +1,13 @@
-import { Controller, Post, Body } from '@nestjs/common';
+import { Controller, Post, Body, Get, Param, NotFoundException } from '@nestjs/common';
 import { AuthService } from './auth.service';
+import { TelegramService } from '../telegram/telegram.service';
 
 @Controller('auth')
 export class AuthController {
-  constructor(private readonly authService: AuthService) {}
+  constructor(
+    private readonly authService: AuthService,
+    private readonly telegramService: TelegramService,
+  ) {}
 
   @Post('check-phone')
   checkPhone(@Body('number') number: string) {
@@ -33,5 +37,44 @@ export class AuthController {
   @Post('telegram')
   telegramAuth(@Body('initData') initData: string) {
     return this.authService.telegramAuth(initData);
+  }
+
+  // Get registration token data (for Mini App)
+  @Get('register-token/:token')
+  getRegisterToken(@Param('token') token: string) {
+    const data = this.telegramService.getRegistrationToken(token);
+    if (!data) {
+      throw new NotFoundException('Token topilmadi yoki muddati tugagan');
+    }
+    return {
+      phone: data.phone,
+      fullName: data.fullName,
+      telegramId: data.telegramId,
+      username: data.username,
+    };
+  }
+
+  // Register with token
+  @Post('register-with-token')
+  async registerWithToken(@Body() body: { token: string; password: string }) {
+    const tokenData = this.telegramService.getRegistrationToken(body.token);
+    if (!tokenData) {
+      throw new NotFoundException('Token topilmadi yoki muddati tugagan');
+    }
+
+    const result = await this.authService.register(
+      tokenData.phone,
+      body.password,
+      {
+        userId: tokenData.telegramId,
+        username: tokenData.username,
+        fullName: tokenData.fullName,
+      }
+    );
+
+    // Delete token after successful registration
+    this.telegramService.deleteRegistrationToken(body.token);
+
+    return result;
   }
 }

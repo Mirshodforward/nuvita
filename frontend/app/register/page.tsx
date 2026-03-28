@@ -5,39 +5,77 @@ import { useRouter, useSearchParams } from "next/navigation";
 import axios from "axios";
 import { API_BASE_URL } from "@/lib/api";
 import { getTelegramWebApp, isTelegramMiniApp } from "@/lib/telegram";
-import { CheckCircle, Lock, Phone, User } from "lucide-react";
+import { CheckCircle, Lock, Phone, User, AlertCircle, Loader2 } from "lucide-react";
+
+interface TokenData {
+  phone: string;
+  fullName: string;
+  telegramId: string;
+  username: string;
+}
 
 function RegisterForm() {
   const [phone, setPhone] = useState("+998");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [loading, setLoading] = useState(false);
+  const [initialLoading, setInitialLoading] = useState(true);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState(false);
   const [isTgMode, setIsTgMode] = useState(false);
   const [fullName, setFullName] = useState("");
+  const [token, setToken] = useState<string | null>(null);
+  const [tokenError, setTokenError] = useState<string | null>(null);
   
   const router = useRouter();
   const searchParams = useSearchParams();
 
   useEffect(() => {
-    // Check if we're in TG registration mode
-    const mode = searchParams.get("mode");
-    const qPhone = searchParams.get("phone");
-    const qFullName = searchParams.get("fullName");
-    
-    if (mode === "register" || qPhone) {
-      setIsTgMode(true);
-      if (qPhone) setPhone(qPhone);
-      if (qFullName) setFullName(decodeURIComponent(qFullName));
-    }
+    const initializeForm = async () => {
+      setInitialLoading(true);
+      
+      // Check for TG Mini App startapp parameter (token)
+      if (isTelegramMiniApp()) {
+        const webApp = getTelegramWebApp();
+        webApp?.ready();
+        webApp?.expand();
+        
+        const startParam = webApp?.initDataUnsafe?.start_param;
+        
+        if (startParam) {
+          // Token-based registration
+          setToken(startParam);
+          setIsTgMode(true);
+          
+          try {
+            const res = await axios.get<TokenData>(`${API_BASE_URL}/auth/register-token/${startParam}`);
+            setPhone(res.data.phone);
+            setFullName(res.data.fullName || '');
+          } catch (err: any) {
+            console.error('Token validation error:', err);
+            setTokenError(err.response?.data?.message || "Havola yaroqsiz yoki muddati tugagan. Iltimos, botdan qaytadan /start bosing.");
+          }
+          
+          setInitialLoading(false);
+          return;
+        }
+      }
 
-    // Tell TG WebApp we're ready
-    if (isTelegramMiniApp()) {
-      const webApp = getTelegramWebApp();
-      webApp?.ready();
-      webApp?.expand();
-    }
+      // Fallback: Old query param mode
+      const mode = searchParams.get("mode");
+      const qPhone = searchParams.get("phone");
+      const qFullName = searchParams.get("fullName");
+      
+      if (mode === "register" || qPhone) {
+        setIsTgMode(true);
+        if (qPhone) setPhone(qPhone);
+        if (qFullName) setFullName(decodeURIComponent(qFullName));
+      }
+      
+      setInitialLoading(false);
+    };
+
+    initializeForm();
   }, [searchParams]);
 
   const handleRegisterSubmit = async (e: React.FormEvent) => {
@@ -56,14 +94,25 @@ function RegisterForm() {
     setLoading(true);
 
     try {
-      const cleanPhone = phone.replace(/\s+/g, "");
-      const res = await axios.post(`${API_BASE_URL}/auth/register`, {
-        number: cleanPhone,
-        password,
-        telegramId: searchParams.get("telegramId"),
-        username: searchParams.get("username"),
-        fullName: searchParams.get("fullName"),
-      });
+      let res;
+      
+      if (token) {
+        // Token-based registration (new secure way)
+        res = await axios.post(`${API_BASE_URL}/auth/register-with-token`, {
+          token,
+          password,
+        });
+      } else {
+        // Fallback: Old query param way
+        const cleanPhone = phone.replace(/\s+/g, "");
+        res = await axios.post(`${API_BASE_URL}/auth/register`, {
+          number: cleanPhone,
+          password,
+          telegramId: searchParams.get("telegramId"),
+          username: searchParams.get("username"),
+          fullName: searchParams.get("fullName"),
+        });
+      }
 
       // Save tokens
       localStorage.setItem("accessToken", res.data.accessToken);
@@ -89,6 +138,8 @@ function RegisterForm() {
       console.error(err);
       if (err.response?.status === 409) {
         setError("Bu raqam orqali allaqachon ro'yxatdan o'tilgan.");
+      } else if (err.response?.status === 404) {
+        setError("Havola yaroqsiz yoki muddati tugagan.");
       } else {
         setError("Tizimda xatolik yuz berdi. Iltimos qayta urinib ko'ring.");
       }
@@ -96,6 +147,41 @@ function RegisterForm() {
       setLoading(false);
     }
   };
+
+  // Initial loading state
+  if (initialLoading) {
+    return (
+      <div className="flex min-h-full flex-1 flex-col justify-center items-center px-6 py-12">
+        <Loader2 className="w-10 h-10 text-green-600 animate-spin" />
+        <p className="mt-4 text-gray-600">Yuklanmoqda...</p>
+      </div>
+    );
+  }
+
+  // Token error state
+  if (tokenError) {
+    return (
+      <div className="flex min-h-full flex-1 flex-col justify-center items-center px-6 py-12">
+        <div className="bg-red-50 rounded-full p-6 mb-6">
+          <AlertCircle className="w-16 h-16 text-red-500" />
+        </div>
+        <h2 className="text-xl font-bold text-gray-900 mb-2">
+          Xatolik
+        </h2>
+        <p className="text-gray-600 text-center max-w-sm">
+          {tokenError}
+        </p>
+        {isTelegramMiniApp() && (
+          <button
+            onClick={() => getTelegramWebApp()?.close()}
+            className="mt-6 px-6 py-3 bg-gray-100 text-gray-700 rounded-xl font-medium"
+          >
+            Yopish
+          </button>
+        )}
+      </div>
+    );
+  }
 
   // Success state
   if (success) {
@@ -224,7 +310,7 @@ function RegisterForm() {
           >
             {loading ? (
               <>
-                <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                <Loader2 className="w-5 h-5 animate-spin" />
                 Kutilmoqda...
               </>
             ) : (
@@ -253,7 +339,7 @@ export default function RegisterPage() {
   return (
     <Suspense fallback={
       <div className="flex min-h-full items-center justify-center">
-        <div className="w-8 h-8 border-2 border-green-600 border-t-transparent rounded-full animate-spin"></div>
+        <Loader2 className="w-8 h-8 text-green-600 animate-spin" />
       </div>
     }>
       <RegisterForm />

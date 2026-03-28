@@ -1,12 +1,12 @@
 "use client";
 
 import Link from 'next/link';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef, useCallback } from 'react';
 import axios from 'axios';
 import { API_BASE_URL } from "@/lib/api";
 import { useRouter, usePathname } from 'next/navigation';
-import { ShoppingCart, Search } from 'lucide-react';
-import { isTelegramMiniApp, getTelegramInitData, getTelegramUser, getTelegramWebApp } from '@/lib/telegram';
+import { ShoppingCart, Search, X } from 'lucide-react';
+import { isTelegramMiniApp, getTelegramInitData, getTelegramWebApp } from '@/lib/telegram';
 
 interface UserProfile {
   id: number;
@@ -44,6 +44,10 @@ export function Header() {
   const [isTg, setIsTg] = useState(false);
   
   const [searchQuery, setSearchQuery] = useState("");
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const [isScrolled, setIsScrolled] = useState(false);
+  
+  const searchInputRef = useRef<HTMLInputElement>(null);
   
   const router = useRouter();
   const pathname = usePathname();
@@ -59,11 +63,9 @@ export function Header() {
       
       localStorage.setItem("accessToken", accessToken);
       localStorage.setItem("refreshToken", refreshToken);
-      // Save full user data for profile page
       localStorage.setItem("tgUserData", JSON.stringify(user));
       setToken(accessToken);
       
-      // Set profile with all data from backend
       setProfile({
         id: user.id,
         number: user.number,
@@ -75,7 +77,6 @@ export function Header() {
         photoUrl: user.photoUrl,
       });
 
-      // Tell TG WebApp we're ready
       const webApp = getTelegramWebApp();
       webApp?.ready();
       webApp?.expand();
@@ -123,16 +124,14 @@ export function Header() {
     }
   };
 
+  // Main initialization
   useEffect(() => {
-    // Check if we're in Telegram Mini App
     const inTg = isTelegramMiniApp();
     setIsTg(inTg);
 
     if (inTg) {
-      // Auto-authenticate with Telegram
       authenticateWithTelegram();
     } else {
-      // Normal web authentication
       const t = localStorage.getItem("accessToken");
       if (t) {
         setToken(t);
@@ -158,6 +157,28 @@ export function Header() {
     }
   }, [token, isTg]);
 
+  // Scroll handler for collapsing search
+  useEffect(() => {
+    const handleScroll = () => {
+      const scrollY = window.scrollY;
+      if (scrollY > 50 && isSearchOpen) {
+        setIsSearchOpen(false);
+      }
+      setIsScrolled(scrollY > 20);
+    };
+
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, [isSearchOpen]);
+
+  // Focus input when search opens
+  useEffect(() => {
+    if (isSearchOpen && searchInputRef.current) {
+      searchInputRef.current.focus();
+    }
+  }, [isSearchOpen]);
+
+  // Hide header on admin/profile pages
   if (pathname.startsWith('/admin') || pathname.startsWith('/profile')) {       
     return null;
   }
@@ -166,25 +187,31 @@ export function Header() {
     e.preventDefault();
     if (searchQuery.trim()) {
       router.push(`/?q=${encodeURIComponent(searchQuery.trim())}`);
+      setIsSearchOpen(false);
     } else {
       router.push(`/`);
     }
   };
 
-  // Get display name
+  const toggleSearch = useCallback(() => {
+    setIsSearchOpen(prev => !prev);
+  }, []);
+
   const displayName = profile?.fullName || profile?.number || "Profil";
 
   return (
-    <header className="bg-white/95 backdrop-blur-md shadow-sm border-b sticky top-0 z-50 rounded-b-3xl">
+    <header className={`bg-white/95 backdrop-blur-md shadow-sm border-b sticky top-0 z-50 transition-all duration-300 ${isScrolled ? 'shadow-md' : ''}`}>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex justify-between items-center h-16 gap-4">
+        <div className="flex justify-between items-center h-14 gap-3">
+          {/* Logo */}
           <div className="flex items-center shrink-0">
             <Link href="/" className="text-2xl font-bold text-green-600">       
               Nuvita
             </Link>
           </div>
           
-          <div className="flex-1 max-w-xl hidden sm:block">
+          {/* Desktop Search */}
+          <div className="flex-1 max-w-xl hidden md:block">
             <form onSubmit={handleSearch} className="relative">
               <input 
                 type="text" 
@@ -199,9 +226,19 @@ export function Header() {
             </form>
           </div>
 
-          <div className="flex items-center space-x-2 sm:space-x-4 shrink-0">
+          {/* Right side */}
+          <div className="flex items-center gap-2 shrink-0">
+            {/* Mobile search icon */}
+            <button 
+              onClick={toggleSearch}
+              className="md:hidden p-2 text-gray-600 hover:text-green-600 transition-colors bg-gray-50 rounded-xl"
+              aria-label="Search"
+            >
+              <Search size={22} />
+            </button>
+
             <Link href="/cart" className="relative p-2 text-gray-600 hover:text-green-600 transition-colors flex items-center gap-1 bg-gray-50 rounded-xl">     
-              <ShoppingCart size={24} />
+              <ShoppingCart size={22} />
               {cartCount > 0 && (
                 <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] font-bold w-5 h-5 flex items-center justify-center rounded-full border-2 border-white">
                   {cartCount}
@@ -225,7 +262,7 @@ export function Header() {
                     {displayName.charAt(0).toUpperCase()}
                   </div>
                 )}
-                <div className="hidden sm:flex flex-col items-start">
+                <div className="hidden lg:flex flex-col items-start">
                   <span className="font-medium text-sm text-gray-800 leading-tight">
                     {displayName}
                   </span>
@@ -237,27 +274,39 @@ export function Header() {
                 </div>
               </button>
             ) : (
-              <Link href="/login" className="text-white bg-green-600 hover:bg-green-700 px-4 py-2 rounded-xl font-medium transition-colors text-sm sm:text-base">
+              <Link href="/login" className="text-white bg-green-600 hover:bg-green-700 px-4 py-2 rounded-xl font-medium transition-colors text-sm">
                 Kirish
               </Link>
             )}
           </div>
         </div>
         
-        {/* Mobile Search - Visible only on small screens */}
-        <div className="block sm:hidden pb-3">
-           <form onSubmit={handleSearch} className="relative">
-              <input 
-                type="text" 
-                placeholder="Mahsulot qidirish..." 
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full bg-gray-100 border-none rounded-full py-2 pl-4 pr-10 focus:outline-none focus:ring-2 focus:ring-green-500 transition-all text-sm"
-              />
-              <button type="submit" className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-green-600">
-                <Search size={18} />
+        {/* Mobile Search - Expandable */}
+        <div className={`md:hidden overflow-hidden transition-all duration-300 ease-in-out ${isSearchOpen ? 'max-h-16 pb-3 opacity-100' : 'max-h-0 pb-0 opacity-0'}`}>
+          <form onSubmit={handleSearch} className="relative">
+            <input 
+              ref={searchInputRef}
+              type="text" 
+              placeholder="Mahsulot qidirish..." 
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full bg-gray-100 border-none rounded-full py-2.5 pl-4 pr-20 focus:outline-none focus:ring-2 focus:ring-green-500 transition-all text-sm"
+            />
+            <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1">
+              {searchQuery && (
+                <button 
+                  type="button"
+                  onClick={() => setSearchQuery('')}
+                  className="p-1.5 text-gray-400 hover:text-gray-600"
+                >
+                  <X size={16} />
+                </button>
+              )}
+              <button type="submit" className="p-1.5 text-gray-500 hover:text-green-600 bg-white rounded-full shadow-sm">
+                <Search size={16} />
               </button>
-            </form>
+            </div>
+          </form>
         </div>
       </div>
     </header>

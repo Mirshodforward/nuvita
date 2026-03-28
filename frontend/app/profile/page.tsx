@@ -21,10 +21,9 @@ import {
   Edit2,
   Save,
   X,
-  Globe,
-  ArrowLeft
+  Globe
 } from "lucide-react";
-import { getTelegramUser, isTelegramMiniApp } from "@/lib/telegram";
+import { getTelegramUser, getTelegramWebApp, isTelegramMiniApp } from "@/lib/telegram";
 
 interface UserProfile {
   id: number;
@@ -70,8 +69,21 @@ export default function ProfilePage() {
   const router = useRouter();
 
   useEffect(() => {
-    // Get TG photo and user data if in mini app
-    if (isTelegramMiniApp()) {
+    // Check if in TG Mini App
+    const inTg = isTelegramMiniApp();
+
+    if (inTg) {
+      const webApp = getTelegramWebApp();
+      
+      // Configure BackButton
+      if (webApp?.BackButton) {
+        webApp.BackButton.show();
+        webApp.BackButton.onClick(() => {
+          router.push('/');
+        });
+      }
+
+      // Get TG photo
       const tgUser = getTelegramUser();
       if (tgUser?.photo_url) {
         setTgPhotoUrl(tgUser.photo_url);
@@ -98,7 +110,15 @@ export default function ProfilePage() {
     }
     setToken(t);
     fetchData(t);
-  }, []);
+
+    // Cleanup BackButton on unmount
+    return () => {
+      if (inTg) {
+        const webApp = getTelegramWebApp();
+        webApp?.BackButton?.hide();
+      }
+    };
+  }, [router]);
 
   const fetchData = async (t: string) => {
     try {
@@ -154,171 +174,183 @@ export default function ProfilePage() {
 
   if (loading) {
     return (
-      <div className="flex justify-center items-center h-64">
+      <div className="flex justify-center items-center h-64 bg-white">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600"></div>
       </div>
     );
   }
 
   return (
-    <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-      <button 
-        onClick={() => router.push('/')}
-        className="flex items-center gap-2 text-gray-600 hover:text-green-600 font-medium mb-6 transition-colors w-fit"
-      >
-        <ArrowLeft size={20} /> Asosiy sahifaga qaytish
-      </button>
-      
-      <div className="flex flex-col md:flex-row gap-8">
+    <div className="min-h-screen bg-gray-50">
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
         
-        {/* Sidebar */}
-        <div className="w-full md:w-1/3 lg:w-1/4">
-          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 mb-6 text-center">
-            {tgPhotoUrl ? (
-              <img 
-                src={tgPhotoUrl} 
-                alt="Profile" 
-                className="w-24 h-24 rounded-full object-cover mx-auto mb-4 border-4 border-green-100"
-              />
-            ) : (
-              <div className="w-24 h-24 bg-gradient-to-br from-green-400 to-green-600 rounded-full flex items-center justify-center mx-auto mb-4 text-white text-3xl font-bold">
-                {profile?.fullName?.charAt(0).toUpperCase() || <UserCircle size={64} />}
-              </div>
-            )}
-            <h2 className="text-xl font-bold text-gray-800 mb-1">{profile?.fullName || 'Ism kiritilmagan'}</h2>
-            {profile?.username && (
-              <p className="text-green-600 font-medium mb-1">@{profile.username}</p>
-            )}
-            <p className="text-gray-500 font-medium">{profile?.number?.startsWith('tg_') ? 'Telegram orqali' : profile?.number}</p>
-          </div>
+        <div className="flex flex-col md:flex-row gap-6">
+          
+          {/* Sidebar */}
+          <div className="w-full md:w-1/3 lg:w-1/4">
+            <div className="bg-white border border-gray-100 rounded-2xl shadow-sm p-6 mb-4 text-center">
+              {tgPhotoUrl ? (
+                <img 
+                  src={tgPhotoUrl} 
+                  alt="Profile" 
+                  className="w-20 h-20 rounded-full object-cover mx-auto mb-3 border-4 border-green-500/20"
+                />
+              ) : (
+                <div className="w-20 h-20 bg-gradient-to-br from-green-400 to-green-600 rounded-full flex items-center justify-center mx-auto mb-3 text-white text-2xl font-bold shadow-lg">
+                  {profile?.fullName?.charAt(0).toUpperCase() || <UserCircle size={48} />}
+                </div>
+              )}
+              <h2 className="text-lg font-bold mb-0.5 text-gray-800">
+                {profile?.fullName || 'Ism kiritilmagan'}
+              </h2>
+              {profile?.username && (
+                <p className="text-green-600 font-medium text-sm mb-0.5">@{profile.username}</p>
+              )}
+              <p className="text-sm text-gray-500">
+                {profile?.number?.startsWith('tg_') ? 'Telegram orqali' : profile?.number}
+              </p>
+            </div>
 
-          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-            <button 
-              onClick={() => setActiveTab('info')}
-              className={`w-full flex items-center justify-between p-4 transition-colors ${activeTab === 'info' ? 'bg-green-50 text-green-600 border-l-4 border-green-600' : 'text-gray-600 hover:bg-gray-50 border-l-4 border-transparent'}`}
-            >
-              <div className="flex items-center gap-3 font-medium">
-                <UserCircle size={20} />
-                Shaxsiy ma'lumotlar
-              </div>
-              <ChevronRight size={18} className={activeTab === 'info' ? 'text-green-600' : 'text-gray-400'} />
-            </button>
-            <button 
-              onClick={() => setActiveTab('orders')}
-              className={`w-full flex items-center justify-between p-4 transition-colors ${activeTab === 'orders' ? 'bg-green-50 text-green-600 border-l-4 border-green-600' : 'text-gray-600 hover:bg-gray-50 border-l-4 border-transparent'}`}
-            >
-              <div className="flex items-center gap-3 font-medium">
-                <ShoppingBag size={20} />
-                Mening buyurtmalarim
-              </div>
-              <div className="flex items-center gap-2">
-                {orders.length > 0 && (
-                  <span className="bg-green-100 text-green-700 text-xs py-0.5 px-2 rounded-full font-bold">{orders.length}</span>
-                )}
-                <ChevronRight size={18} className={activeTab === 'orders' ? 'text-green-600' : 'text-gray-400'} />
-              </div>
-            </button>
-            <button 
-              onClick={() => setActiveTab('settings')}
-              className={`w-full flex items-center justify-between p-4 transition-colors ${activeTab === 'settings' ? 'bg-green-50 text-green-600 border-l-4 border-green-600' : 'text-gray-600 hover:bg-gray-50 border-l-4 border-transparent'}`}
-            >
-              <div className="flex items-center gap-3 font-medium">
-                <Settings size={20} />
-                Sozlamalar
-              </div>
-              <ChevronRight size={18} className={activeTab === 'settings' ? 'text-green-600' : 'text-gray-400'} />
-            </button>
-            
-            <div className="h-px bg-gray-100 my-2"></div>
-            
-            <button 
-              onClick={handleLogout}
-              className="w-full flex items-center gap-3 p-4 text-red-500 font-medium hover:bg-red-50 transition-colors"
-            >
-              <LogOut size={20} />
-              Tizimdan chiqish
-            </button>
+            <div className="bg-white border border-gray-100 rounded-2xl shadow-sm overflow-hidden">
+              <button 
+                onClick={() => setActiveTab('info')}
+                className={`w-full flex items-center justify-between p-3.5 transition-colors ${
+                  activeTab === 'info' 
+                    ? 'bg-green-500/10 text-green-600 border-l-4 border-green-600' 
+                    : 'text-gray-600 hover:bg-gray-50 border-l-4 border-transparent'
+                }`}
+              >
+                <div className="flex items-center gap-3 font-medium text-sm">
+                  <UserCircle size={18} />
+                  Shaxsiy ma'lumotlar
+                </div>
+                <ChevronRight size={16} className={activeTab === 'info' ? 'text-green-600' : 'opacity-40'} />
+              </button>
+              <button 
+                onClick={() => setActiveTab('orders')}
+                className={`w-full flex items-center justify-between p-3.5 transition-colors ${
+                  activeTab === 'orders' 
+                    ? 'bg-green-500/10 text-green-600 border-l-4 border-green-600' 
+                    : 'text-gray-600 hover:bg-gray-50 border-l-4 border-transparent'
+                }`}
+              >
+                <div className="flex items-center gap-3 font-medium text-sm">
+                  <ShoppingBag size={18} />
+                  Buyurtmalarim
+                </div>
+                <div className="flex items-center gap-2">
+                  {orders.length > 0 && (
+                    <span className="bg-green-100 text-green-700 text-xs py-0.5 px-2 rounded-full font-bold">{orders.length}</span>
+                  )}
+                  <ChevronRight size={16} className={activeTab === 'orders' ? 'text-green-600' : 'opacity-40'} />
+                </div>
+              </button>
+              <button 
+                onClick={() => setActiveTab('settings')}
+                className={`w-full flex items-center justify-between p-3.5 transition-colors ${
+                  activeTab === 'settings' 
+                    ? 'bg-green-500/10 text-green-600 border-l-4 border-green-600' 
+                    : 'text-gray-600 hover:bg-gray-50 border-l-4 border-transparent'
+                }`}
+              >
+                <div className="flex items-center gap-3 font-medium text-sm">
+                  <Settings size={18} />
+                  Sozlamalar
+                </div>
+                <ChevronRight size={16} className={activeTab === 'settings' ? 'text-green-600' : 'opacity-40'} />
+              </button>
+              
+              <div className="h-px my-1 bg-gray-100"></div>
+              
+              <button 
+                onClick={handleLogout}
+                className="w-full flex items-center gap-3 p-3.5 text-red-500 font-medium hover:bg-red-50/50 transition-colors text-sm"
+              >
+                <LogOut size={18} />
+                Chiqish
+              </button>
+            </div>
           </div>
-        </div>
 
         {/* Content Area */}
         <div className="w-full md:w-2/3 lg:w-3/4">
           
           {/* TAB: INFO */}
           {activeTab === 'info' && (
-            <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 sm:p-8">
-              <div className="flex justify-between items-center mb-6 border-b pb-4">
-                <h3 className="text-2xl font-bold text-gray-800">Shaxsiy ma'lumotlar</h3>
+            <div className="bg-white border border-gray-100 rounded-2xl shadow-sm p-5 sm:p-6">
+              <div className="flex justify-between items-center mb-5 pb-4 border-b border-gray-100">
+                <h3 className="text-xl font-bold text-gray-800">
+                  Shaxsiy ma'lumotlar
+                </h3>
                 {!isEditing ? (
                   <button 
                     onClick={() => setIsEditing(true)} 
-                    className="flex items-center gap-2 text-sm font-medium text-blue-600 bg-blue-50 py-2 px-4 rounded-lg hover:bg-blue-100 transition-colors"
+                    className="flex items-center gap-2 text-sm font-medium text-blue-600 bg-blue-500/10 py-2 px-3 rounded-lg hover:bg-blue-500/20 transition-colors"
                   >
-                    <Edit2 size={16} /> Tahrirlash
+                    <Edit2 size={14} /> Tahrirlash
                   </button>
                 ) : (
                   <div className="flex gap-2">
                     <button 
                       onClick={() => setIsEditing(false)} 
-                      className="flex items-center gap-2 text-sm font-medium text-gray-600 bg-gray-100 py-2 px-4 rounded-lg hover:bg-gray-200 transition-colors"
+                      className="flex items-center gap-1.5 text-sm font-medium text-gray-600 bg-gray-100 py-2 px-3 rounded-lg hover:bg-gray-200 transition-colors"
                     >
-                      <X size={16} /> Bekor qilish
+                      <X size={14} /> Bekor
                     </button>
                     <button 
                       onClick={() => handleUpdate(formData)} 
-                      className="flex items-center gap-2 text-sm font-medium text-white bg-green-600 py-2 px-4 rounded-lg hover:bg-green-500 transition-colors shadow-sm shadow-green-200"
+                      className="flex items-center gap-1.5 text-sm font-medium text-white bg-green-600 py-2 px-3 rounded-lg hover:bg-green-500 transition-colors"
                     >
-                      <Save size={16} /> Saqlash
+                      <Save size={14} /> Saqlash
                     </button>
                   </div>
                 )}
               </div>
 
               {isEditing ? (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div className="space-y-2">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-1.5">
                     <label className="text-sm font-medium text-gray-700">Ism Familiya</label>
                     <input 
                       type="text" 
-                      className="w-full border rounded-xl px-4 py-3 focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none transition-all"
+                      className="w-full border rounded-xl px-4 py-3 focus:ring-2 focus:ring-green-500 outline-none transition-all"
                       value={formData.fullName || ''}
                       onChange={e => setFormData({...formData, fullName: e.target.value})}
                       placeholder="Masalan: Aliyev Vali"
                     />
                   </div>
-                  <div className="space-y-2">
+                  <div className="space-y-1.5">
                     <label className="text-sm font-medium text-gray-700">Telefon raqam</label>
                     <input 
                       type="text" 
                       disabled
-                      className="w-full border-gray-200 rounded-xl px-4 py-3 bg-gray-50 text-gray-500 cursor-not-allowed"
+                      className="w-full border-gray-200 bg-gray-50 text-gray-500 rounded-xl px-4 py-3 cursor-not-allowed"
                       value={profile?.number || ''}
                     />
-                    <p className="text-xs text-gray-400">Raqamni o'zgartirish mumkin emas</p>
                   </div>
-                  <div className="space-y-2 md:col-span-2">
+                  <div className="space-y-1.5 md:col-span-2">
                     <label className="text-sm font-medium text-gray-700">Manzil</label>
                     <input 
                       type="text" 
-                      className="w-full border rounded-xl px-4 py-3 focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none transition-all"
+                      className="w-full border rounded-xl px-4 py-3 focus:ring-2 focus:ring-green-500 outline-none transition-all"
                       value={formData.address || ''}
                       onChange={e => setFormData({...formData, address: e.target.value})}
                       placeholder="Shahar, Tuman, Ko'cha..."
                     />
                   </div>
-                  <div className="space-y-2">
+                  <div className="space-y-1.5">
                     <label className="text-sm font-medium text-gray-700">Tug'ilgan sana</label>
                     <input 
                       type="date" 
-                      className="w-full border rounded-xl px-4 py-3 focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none transition-all"
+                      className="w-full border rounded-xl px-4 py-3 focus:ring-2 focus:ring-green-500 outline-none transition-all"
                       value={formData.dateOfBirth ? formData.dateOfBirth.split('T')[0] : ''}
                       onChange={e => setFormData({...formData, dateOfBirth: e.target.value ? new Date(e.target.value).toISOString() : null})}
                     />
                   </div>
-                  <div className="space-y-2">
+                  <div className="space-y-1.5">
                     <label className="text-sm font-medium text-gray-700">Jinsi</label>
                     <select 
-                      className="w-full border rounded-xl px-4 py-3 focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none transition-all"
+                      className="w-full border rounded-xl px-4 py-3 focus:ring-2 focus:ring-green-500 outline-none transition-all"
                       value={formData.gender || ''}
                       onChange={e => setFormData({...formData, gender: e.target.value})}
                     >
@@ -329,41 +361,41 @@ export default function ProfilePage() {
                   </div>
                 </div>
               ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div className="bg-gray-50 p-4 rounded-xl flex items-start gap-4 hover:shadow-sm transition-shadow">
-                    <div className="bg-white p-2 text-blue-500 rounded-lg shadow-sm"><UserCircle size={24} /></div>
-                    <div>
-                      <p className="text-xs text-gray-500 font-medium mb-1">Ism Familiya</p>
-                      <p className="font-semibold text-gray-800">{profile?.fullName || "Kiritilmagan"}</p>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div className="bg-gray-50 p-4 rounded-xl flex items-center gap-4">
+                    <div className="p-2.5 bg-blue-500/10 text-blue-500 rounded-lg"><UserCircle size={22} /></div>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-xs font-medium mb-0.5 text-gray-500">Ism Familiya</p>
+                      <p className="font-semibold truncate text-gray-800">{profile?.fullName || "Kiritilmagan"}</p>
                     </div>
                   </div>
-                  <div className="bg-gray-50 p-4 rounded-xl flex items-start gap-4 hover:shadow-sm transition-shadow">
-                    <div className="bg-white p-2 text-green-500 rounded-lg shadow-sm"><Phone size={24} /></div>
-                    <div>
-                      <p className="text-xs text-gray-500 font-medium mb-1">Telefon raqam</p>
-                      <p className="font-semibold text-gray-800">{profile?.number}</p>
+                  <div className="bg-gray-50 p-4 rounded-xl flex items-center gap-4">
+                    <div className="p-2.5 bg-green-500/10 text-green-500 rounded-lg"><Phone size={22} /></div>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-xs font-medium mb-0.5 text-gray-500">Telefon raqam</p>
+                      <p className="font-semibold truncate text-gray-800">{profile?.number}</p>
                     </div>
                   </div>
-                  <div className="bg-gray-50 p-4 rounded-xl flex items-start gap-4 md:col-span-2 hover:shadow-sm transition-shadow">
-                    <div className="bg-white p-2 text-red-500 rounded-lg shadow-sm"><MapPin size={24} /></div>
-                    <div>
-                      <p className="text-xs text-gray-500 font-medium mb-1">Manzil</p>
-                      <p className="font-semibold text-gray-800">{profile?.address || "Kiritilmagan"}</p>
+                  <div className="bg-gray-50 p-4 rounded-xl flex items-center gap-4 sm:col-span-2">
+                    <div className="p-2.5 bg-red-500/10 text-red-500 rounded-lg"><MapPin size={22} /></div>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-xs font-medium mb-0.5 text-gray-500">Manzil</p>
+                      <p className="font-semibold truncate text-gray-800">{profile?.address || "Kiritilmagan"}</p>
                     </div>
                   </div>
-                  <div className="bg-gray-50 p-4 rounded-xl flex items-start gap-4 hover:shadow-sm transition-shadow">
-                    <div className="bg-white p-2 text-purple-500 rounded-lg shadow-sm"><Calendar size={24} /></div>
-                    <div>
-                      <p className="text-xs text-gray-500 font-medium mb-1">Tug'ilgan sana</p>
+                  <div className="bg-gray-50 p-4 rounded-xl flex items-center gap-4">
+                    <div className="p-2.5 bg-purple-500/10 text-purple-500 rounded-lg"><Calendar size={22} /></div>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-xs font-medium mb-0.5 text-gray-500">Tug'ilgan sana</p>
                       <p className="font-semibold text-gray-800">
                         {profile?.dateOfBirth ? new Date(profile.dateOfBirth).toLocaleDateString('uz-UZ') : "Kiritilmagan"}
                       </p>
                     </div>
                   </div>
-                  <div className="bg-gray-50 p-4 rounded-xl flex items-start gap-4 hover:shadow-sm transition-shadow">
-                    <div className="bg-white p-2 text-orange-500 rounded-lg shadow-sm"><UserCircle size={24} /></div>
-                    <div>
-                      <p className="text-xs text-gray-500 font-medium mb-1">Jinsi</p>
+                  <div className="bg-gray-50 p-4 rounded-xl flex items-center gap-4">
+                    <div className="p-2.5 bg-orange-500/10 text-orange-500 rounded-lg"><UserCircle size={22} /></div>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-xs font-medium mb-0.5 text-gray-500">Jinsi</p>
                       <p className="font-semibold text-gray-800">
                         {profile?.gender === 'MALE' ? 'Erkak' : profile?.gender === 'FEMALE' ? 'Ayol' : "Kiritilmagan"}
                       </p>
@@ -376,74 +408,79 @@ export default function ProfilePage() {
 
           {/* TAB: ORDERS */}
           {activeTab === 'orders' && (
-            <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 sm:p-8 min-h-[500px]">
-              <div className="border-b pb-4 mb-6">
-                <h3 className="text-2xl font-bold text-gray-800">Mening buyurtmalarim</h3>
-                <p className="text-gray-500 mt-1">Sizning barcha xaridlar tarixingiz shu yerda saqlanadi.</p>
+            <div className="bg-white border border-gray-100 rounded-2xl shadow-sm p-5 sm:p-6 min-h-[400px]">
+              <div className="pb-4 mb-5 border-b border-gray-100">
+                <h3 className="text-xl font-bold text-gray-800">Buyurtmalarim</h3>
+                <p className="text-sm mt-1 text-gray-500">Barcha xaridlar tarixi</p>
               </div>
 
               {orders.length === 0 ? (
-                <div className="text-center py-16">
-                  <div className="w-20 h-20 bg-gray-50 rounded-full flex items-center justify-center mx-auto mb-4">
-                    <Package size={40} className="text-gray-300" />
+                <div className="text-center py-12">
+                  <div className="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <Package size={32} className="text-gray-300" />
                   </div>
-                  <h4 className="text-xl font-bold text-gray-700 mb-2">Buyurtmalar yo'q</h4>
-                  <p className="text-gray-500 mb-6 max-w-md mx-auto">Siz hali hech narsa buyurtma qilmadingiz. Saytimizdagi mahsulotlarni ko'rib chiqing va xarid qiling.</p>
+                  <h4 className="text-lg font-bold mb-2 text-gray-700">Buyurtmalar yo'q</h4>
+                  <p className="text-sm mb-5 max-w-xs mx-auto text-gray-500">
+                    Siz hali hech narsa buyurtma qilmadingiz.
+                  </p>
                   <button 
                     onClick={() => router.push('/')}
-                    className="bg-green-600 text-white font-medium px-6 py-3 rounded-xl hover:bg-green-500 transition-colors shadow-sm shadow-green-200"
+                    className="bg-green-600 text-white font-medium px-5 py-2.5 rounded-xl hover:bg-green-500 transition-colors text-sm"
                   >
-                    Bosh sahifaga o'tish
+                    Xarid qilish
                   </button>
                 </div>
               ) : (
-                <div className="space-y-4">
+                <div className="space-y-3">
                   {orders.map((order) => {
                     const st = mapStatus(order.orderStatus);
                     return (
-                      <div key={order.id} className="border border-gray-100 rounded-2xl p-5 hover:shadow-md transition-shadow bg-white">
-                        <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4 mb-4 pb-4 border-b border-gray-50">
+                      <div key={order.id} className="border border-gray-100 bg-white rounded-xl p-4">
+                        <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-3 mb-3 pb-3 border-b border-gray-100">
                           <div>
-                            <div className="flex items-center gap-3">
-                              <span className="font-bold text-lg text-gray-800">Buyurtma #{order.id}</span>
-                              <span className={`px-2.5 py-1 rounded-full text-xs font-semibold flex items-center gap-1.5 ${st.color}`}>
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <span className="font-bold text-gray-800">#{order.id}</span>
+                              <span className={`px-2 py-0.5 rounded-full text-xs font-semibold flex items-center gap-1 ${st.color}`}>
                                 {st.icon} {st.label}
                               </span>
                             </div>
-                            <div className="text-sm text-gray-500 mt-1 flex items-center gap-2">
-                              <Calendar size={14} /> 
-                              {new Date(order.createdAt).toLocaleString('uz-UZ', { day: '2-digit', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                            <div className="text-xs mt-1 flex items-center gap-1.5 text-gray-500">
+                              <Calendar size={12} /> 
+                              {new Date(order.createdAt).toLocaleString('uz-UZ', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}
                             </div>
                           </div>
                           <div className="text-left sm:text-right">
-                            <div className="font-bold text-xl text-green-600">
+                            <div className="font-bold text-green-600">
                               {(order.summ + order.deliverySumm).toLocaleString()} so'm
                             </div>
-                            <div className="text-xs font-semibold text-blue-500 mt-0.5">
+                            <div className="text-xs text-blue-500 font-medium">
                               {order.paymentType}
                             </div>
                           </div>
                         </div>
 
-                        <div className="flex flex-wrap gap-2 mb-3">
-                          {order.productItems?.map((item, idx) => (
-                            <div key={idx} className="flex items-center gap-2 bg-gray-50 rounded-lg pr-3 pl-1 py-1 border border-gray-100">
+                        <div className="flex flex-wrap gap-1.5 mb-2">
+                          {order.productItems?.slice(0, 3).map((item, idx) => (
+                            <div key={idx} className="bg-gray-50 border border-gray-100 flex items-center gap-1.5 rounded-lg pr-2 pl-1 py-1 text-xs">
                               {item.photoUrl ? (
-                                <img src={item.photoUrl.startsWith('/') ? `${API_BASE_URL}${item.photoUrl}` : `${API_BASE_URL}/ProductPhoto/${item.photoUrl}`} alt="p" className="w-8 h-8 rounded object-cover" />
+                                <img src={item.photoUrl.startsWith('/') ? `${API_BASE_URL}${item.photoUrl}` : `${API_BASE_URL}/ProductPhoto/${item.photoUrl}`} alt="p" className="w-6 h-6 rounded object-cover" />
                               ) : (
-                                <div className="w-8 h-8 rounded bg-gray-200 flex items-center justify-center text-xs"><Package size={14} className="text-gray-400"/></div>
+                                <div className="w-6 h-6 rounded bg-gray-200 flex items-center justify-center"><Package size={12} className="text-gray-400"/></div>
                               )}
-                              <div className="text-sm">
-                                <span className="font-medium text-gray-800 line-clamp-1 max-w-[120px]">{item.name}</span>
-                                <span className="text-xs text-gray-500 block">{item.count} ta x {item.price.toLocaleString()}</span>
-                              </div>
+                              <span className="font-medium truncate max-w-[80px] text-gray-800">{item.name}</span>
+                              <span className="text-gray-500">×{item.count}</span>
                             </div>
                           ))}
+                          {order.productItems?.length > 3 && (
+                            <span className="bg-gray-50 text-gray-500 px-2 py-1 rounded-lg text-xs font-medium">
+                              +{order.productItems.length - 3}
+                            </span>
+                          )}
                         </div>
                         
-                        <div className="flex items-center gap-2 text-sm text-gray-500 bg-blue-50/50 p-2 rounded-lg border border-blue-50">
-                          <MapPin size={16} className="text-blue-500" />
-                          <span className="line-clamp-1">{order.address}</span>
+                        <div className="bg-blue-50 text-blue-600 flex items-center gap-1.5 text-xs p-2 rounded-lg">
+                          <MapPin size={12} />
+                          <span className="truncate">{order.address}</span>
                         </div>
                       </div>
                     )
@@ -452,44 +489,44 @@ export default function ProfilePage() {
               )}
             </div>
           )}
-
+          
           {/* TAB: SETTINGS */}
           {activeTab === 'settings' && (
-            <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 sm:p-8 min-h-[500px]">
-              <div className="border-b pb-4 mb-6">
-                <h3 className="text-2xl font-bold text-gray-800">Tizim sozlamalari</h3>
-                <p className="text-gray-500 mt-1">Sayt tilini va boshqa sozlamalarni shu yerdan o'rnatishingiz mumkin.</p>
+            <div className="bg-white border border-gray-100 rounded-2xl shadow-sm p-5 sm:p-6 min-h-[400px]">
+              <div className="pb-4 mb-5 border-b border-gray-100">
+                <h3 className="text-xl font-bold text-gray-800">Sozlamalar</h3>
+                <p className="text-sm mt-1 text-gray-500">Sayt tilini o'zgartirish</p>
               </div>
 
-              <div className="space-y-6">
-                <div className="bg-gray-50 rounded-2xl p-6 border border-gray-100">
-                  <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
-                    <div className="flex gap-4">
-                      <div className="bg-white p-3 rounded-xl shadow-sm text-blue-500 h-fit">
-                        <Globe size={28} />
+              <div className="space-y-4">
+                <div className="bg-gray-50 border border-gray-100 rounded-xl p-5">
+                  <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                    <div className="flex gap-3">
+                      <div className="p-2.5 rounded-lg bg-blue-500/10 text-blue-500 h-fit">
+                        <Globe size={22} />
                       </div>
                       <div>
-                        <h4 className="text-lg font-bold text-gray-800 mb-1">Muloqot tili</h4>
-                        <p className="text-sm text-gray-500 max-w-sm">Tizim interfeysini va xabarnomalarni qaysi tilda ko'rsatishni xohlaysiz?</p>
+                        <h4 className="font-bold mb-0.5 text-gray-800">Til</h4>
+                        <p className="text-xs text-gray-500">Interfeys tili</p>
                       </div>
                     </div>
                     
-                    <div className="flex flex-wrap gap-2 w-full md:w-auto">
+                    <div className="flex flex-wrap gap-2 w-full sm:w-auto">
                       <button 
                         onClick={() => handleUpdate({ lang: 'UZ' }, false)}
-                        className={`flex-1 md:flex-none px-4 py-2.5 rounded-xl font-medium transition-all ${profile?.lang === 'UZ' ? 'bg-green-600 text-white shadow-md shadow-green-200' : 'bg-white text-gray-700 border hover:bg-gray-50'}`}
+                        className={`flex-1 sm:flex-none px-3 py-2 rounded-lg text-sm font-medium transition-all ${profile?.lang === 'UZ' ? 'bg-green-600 text-white' : 'bg-white text-gray-700 border hover:bg-gray-50'}`}
                       >
                         🇺🇿 O'zbek
                       </button>
                       <button 
                         onClick={() => handleUpdate({ lang: 'RU' }, false)}
-                        className={`flex-1 md:flex-none px-4 py-2.5 rounded-xl font-medium transition-all ${profile?.lang === 'RU' ? 'bg-green-600 text-white shadow-md shadow-green-200' : 'bg-white text-gray-700 border hover:bg-gray-50'}`}
+                        className={`flex-1 sm:flex-none px-3 py-2 rounded-lg text-sm font-medium transition-all ${profile?.lang === 'RU' ? 'bg-green-600 text-white' : 'bg-white text-gray-700 border hover:bg-gray-50'}`}
                       >
                         🇷🇺 Русский
                       </button>
                       <button 
                         onClick={() => handleUpdate({ lang: 'EN' }, false)}
-                        className={`flex-1 md:flex-none px-4 py-2.5 rounded-xl font-medium transition-all ${profile?.lang === 'EN' ? 'bg-green-600 text-white shadow-md shadow-green-200' : 'bg-white text-gray-700 border hover:bg-gray-50'}`}
+                        className={`flex-1 sm:flex-none px-3 py-2 rounded-lg text-sm font-medium transition-all ${profile?.lang === 'EN' ? 'bg-green-600 text-white' : 'bg-white text-gray-700 border hover:bg-gray-50'}`}
                       >
                         🇬🇧 English
                       </button>
@@ -503,5 +540,6 @@ export default function ProfilePage() {
         </div>
       </div>
     </div>
+  </div>
   );
 }
