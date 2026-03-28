@@ -37,6 +37,7 @@ export default function CheckoutPage() {
   
   const [submitting, setSubmitting] = useState(false);
   const [success, setSuccess] = useState(false);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const token = localStorage.getItem("accessToken");
@@ -55,6 +56,10 @@ export default function CheckoutPage() {
 
         const p = profRes.data;
         setProfile(p);
+        
+        // Log for debugging
+        console.log("Cart data:", cartRes.data);
+        
         setCart(cartRes.data);
         if (settRes.data && settRes.data.deliverySumm !== undefined) {
            setDeliverySumm(settRes.data.deliverySumm);
@@ -70,7 +75,10 @@ export default function CheckoutPage() {
             router.push("/cart");
         }
       } catch (err) {
-        console.error(err);
+        console.error("Checkout fetch error:", err);
+        router.push("/cart");
+      } finally {
+        setLoading(false);
       }
     };
     fetchData();
@@ -102,6 +110,17 @@ export default function CheckoutPage() {
       setSubmitting(false);
     }
   };
+
+  if (loading) {
+    return (
+      <div className="bg-gray-50 min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-10 h-10 border-4 border-gray-200 border-t-green-500 rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-gray-500">Yuklanmoqda...</p>
+        </div>
+      </div>
+    );
+  }
 
   if (success) {
     return (
@@ -232,7 +251,7 @@ export default function CheckoutPage() {
               <div className="space-y-4 mb-6">
                 <div className="flex justify-between text-gray-600">
                   <span>Mahsulotlar ({cart?.count || 0} ta)</span>
-                  <span className="font-medium text-gray-900">{cart?.summ?.toLocaleString()} so`m</span>
+                  <span className="font-medium text-gray-900">{(cart?.summ || 0).toLocaleString()} so`m</span>
                 </div>
                 <div className="flex justify-between text-gray-600">
                   <span>Yetkazib berish</span>
