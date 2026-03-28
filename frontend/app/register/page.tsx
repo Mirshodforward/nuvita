@@ -120,13 +120,13 @@ function RegisterForm() {
       
       setSuccess(true);
 
-      // If in TG Mini App, show success and close after delay
+      // If in TG Mini App, redirect to main page after delay
       if (isTelegramMiniApp()) {
         const webApp = getTelegramWebApp();
         webApp?.HapticFeedback?.notificationOccurred("success");
         
         setTimeout(() => {
-          webApp?.close();
+          router.push("/");
         }, 2000);
       } else {
         // Regular web - redirect to profile
@@ -195,10 +195,8 @@ function RegisterForm() {
         </h2>
         <p className="text-gray-600 text-center">
           Ro'yxatdan o'tish yakunlandi.
-          {isTelegramMiniApp() 
-            ? " Telegram botga qaytishingiz mumkin." 
-            : " Profilga yo'naltirilmoqda..."}
-        </p>
+          <br />
+          Asosiy sahifaga yo'naltirilmoqda...</p>
       </div>
     );
   }

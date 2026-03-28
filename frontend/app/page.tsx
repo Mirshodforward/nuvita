@@ -4,8 +4,9 @@
 import { useEffect, useState, Suspense } from "react";
 import axios from "axios";
 import { API_BASE_URL } from "@/lib/api";
-import { ShoppingCart, Plus, Minus } from "lucide-react";
-import { useSearchParams } from "next/navigation";
+import { ShoppingCart, Plus, Minus, Loader2 } from "lucide-react";
+import { useSearchParams, useRouter } from "next/navigation";
+import { getTelegramWebApp, isTelegramMiniApp } from "@/lib/telegram";
 
 interface Product {
   id: number;
@@ -29,8 +30,28 @@ function ProductList() {
   const [products, setProducts] = useState<Product[]>([]);
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const [redirecting, setRedirecting] = useState(false);
   const searchParams = useSearchParams();
   const searchQuery = searchParams.get("q") || "";
+  const router = useRouter();
+
+  // Check for Telegram Mini App startapp parameter and redirect to register page
+  useEffect(() => {
+    if (isTelegramMiniApp()) {
+      const webApp = getTelegramWebApp();
+      webApp?.ready();
+      webApp?.expand();
+      
+      const startParam = webApp?.initDataUnsafe?.start_param;
+      
+      if (startParam) {
+        // Token detected - redirect to register page for password setup
+        setRedirecting(true);
+        router.replace('/register');
+        return;
+      }
+    }
+  }, [router]);
 
   const fetchCartOptions = async () => {
     const token = localStorage.getItem("accessToken");
@@ -109,6 +130,16 @@ function ProductList() {
   const filteredProducts = products.filter(p =>
     p.name.toLowerCase().includes(searchQuery.toLowerCase())
   );
+
+  // Show loading while redirecting to register page
+  if (redirecting) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-screen bg-gray-50">
+        <Loader2 className="w-10 h-10 text-green-600 animate-spin" />
+        <p className="mt-4 text-gray-600">Parol o'rnatish sahifasiga yo'naltirilmoqda...</p>
+      </div>
+    );
+  }
 
   if (loading) return <div className="text-center py-20 text-gray-500 font-medium text-lg">Yuklanmoqda...</div>;
 
