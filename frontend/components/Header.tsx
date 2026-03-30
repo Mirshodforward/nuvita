@@ -344,13 +344,7 @@ export function Header() {
             >
               Katalog
             </Link>
-            <Link 
-              href="/services" 
-              onClick={() => setIsMenuOpen(false)}
-              className="px-4 py-3 rounded-xl hover:bg-white hover:shadow-sm text-gray-700 font-medium transition-all"
-            >
-              Xizmatlarimiz
-            </Link>
+            
             <Link 
               href="#contact" 
               onClick={() => setIsMenuOpen(false)}
