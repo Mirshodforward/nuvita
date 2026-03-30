@@ -26,6 +26,7 @@ import {
   ExternalLink,
   Loader2
 } from "lucide-react";
+import Link from "next/link";
 import { getTelegramUser, getTelegramWebApp, isTelegramMiniApp } from "@/lib/telegram";
 
 interface UserProfile {
@@ -54,7 +55,7 @@ interface Order {
   productItems: any[];
 }
 
-type TabType = 'info' | 'orders' | 'settings';
+type TabType = 'info' | 'settings';
 
 export default function ProfilePage() {
   const router = useRouter();
@@ -300,13 +301,9 @@ export default function ProfilePage() {
                 </div>
                 <ChevronRight size={16} className={activeTab === 'info' ? 'text-green-600' : 'opacity-40'} />
               </button>
-              <button 
-                onClick={() => setActiveTab('orders')}
-                className={`w-full flex items-center justify-between p-3.5 transition-colors ${
-                  activeTab === 'orders' 
-                    ? 'bg-green-500/10 text-green-600 border-l-4 border-green-600' 
-                    : 'text-gray-600 hover:bg-gray-50 border-l-4 border-transparent'
-                }`}
+              <Link 
+                href="/orders"
+                className={`w-full flex items-center justify-between p-3.5 transition-colors text-gray-600 hover:bg-gray-50 border-l-4 border-transparent`}
               >
                 <div className="flex items-center gap-3 font-medium text-sm">
                   <ShoppingBag size={18} />
@@ -316,9 +313,9 @@ export default function ProfilePage() {
                   {orders.length > 0 && (
                     <span className="bg-green-100 text-green-700 text-xs py-0.5 px-2 rounded-full font-bold">{orders.length}</span>
                   )}
-                  <ChevronRight size={16} className={activeTab === 'orders' ? 'text-green-600' : 'opacity-40'} />
+                  <ChevronRight size={16} className={'opacity-40'} />
                 </div>
-              </button>
+              </Link>
               <button 
                 onClick={() => setActiveTab('settings')}
                 className={`w-full flex items-center justify-between p-3.5 transition-colors ${
@@ -493,90 +490,6 @@ export default function ProfilePage() {
               </div>
             )}
 
-            {/* TAB: ORDERS */}
-            {activeTab === 'orders' && (
-              <div className="bg-white border border-gray-100 rounded-2xl shadow-sm p-5 sm:p-6 min-h-[400px]">
-                <div className="pb-4 mb-5 border-b border-gray-100">
-                  <h3 className="text-xl font-bold text-gray-800">Buyurtmalarim</h3>
-                  <p className="text-sm mt-1 text-gray-500">Barcha xaridlar tarixi</p>
-                </div>
-
-                {orders.length === 0 ? (
-                  <div className="text-center py-12">
-                    <div className="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mx-auto mb-4">
-                      <Package size={32} className="text-gray-300" />
-                    </div>
-                    <h4 className="text-lg font-bold mb-2 text-gray-700">Buyurtmalar yo&apos;q</h4>
-                    <p className="text-sm mb-5 max-w-xs mx-auto text-gray-500">
-                      Siz hali hech narsa buyurtma qilmadingiz.
-                    </p>
-                    <button 
-                      onClick={() => router.push('/')}
-                      className="bg-green-600 text-white font-medium px-5 py-2.5 rounded-xl hover:bg-green-500 transition-colors text-sm"
-                    >
-                      Xarid qilish
-                    </button>
-                  </div>
-                ) : (
-                  <div className="space-y-3">
-                    {orders.map((order) => {
-                      const st = getStatusInfo(order.orderStatus);
-                      return (
-                        <div key={order.id} className="border border-gray-100 bg-white rounded-xl p-4">
-                          <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-3 mb-3 pb-3 border-b border-gray-100">
-                            <div>
-                              <div className="flex items-center gap-2 flex-wrap">
-                                <span className="font-bold text-gray-800">#{order.id}</span>
-                                <span className={`px-2 py-0.5 rounded-full text-xs font-semibold flex items-center gap-1 ${st.color}`}>
-                                  {st.icon} {st.label}
-                                </span>
-                              </div>
-                              <div className="text-xs mt-1 flex items-center gap-1.5 text-gray-500">
-                                <Calendar size={12} /> 
-                                {new Date(order.createdAt).toLocaleString('uz-UZ', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}
-                              </div>
-                            </div>
-                            <div className="text-left sm:text-right">
-                              <div className="font-bold text-green-600">
-                                {(order.summ + order.deliverySumm).toLocaleString()} so&apos;m
-                              </div>
-                              <div className="text-xs text-blue-500 font-medium">
-                                {order.paymentType}
-                              </div>
-                            </div>
-                          </div>
-
-                          <div className="flex flex-wrap gap-1.5 mb-2">
-                            {order.productItems?.slice(0, 3).map((item, idx) => (
-                              <div key={idx} className="bg-gray-50 border border-gray-100 flex items-center gap-1.5 rounded-lg pr-2 pl-1 py-1 text-xs">
-                                {item.photoUrl ? (
-                                  <img src={item.photoUrl.startsWith('/') ? `${API_BASE_URL}${item.photoUrl}` : `${API_BASE_URL}/ProductPhoto/${item.photoUrl}`} alt="p" className="w-6 h-6 rounded object-cover" />
-                                ) : (
-                                  <div className="w-6 h-6 rounded bg-gray-200 flex items-center justify-center"><Package size={12} className="text-gray-400"/></div>
-                                )}
-                                <span className="font-medium truncate max-w-[80px] text-gray-800">{item.name}</span>
-                                <span className="text-gray-500">×{item.count}</span>
-                              </div>
-                            ))}
-                            {order.productItems?.length > 3 && (
-                              <span className="bg-gray-50 text-gray-500 px-2 py-1 rounded-lg text-xs font-medium">
-                                +{order.productItems.length - 3}
-                              </span>
-                            )}
-                          </div>
-                          
-                          <div className="bg-blue-50 text-blue-600 flex items-center gap-1.5 text-xs p-2 rounded-lg">
-                            <MapPin size={12} />
-                            <span className="truncate">{order.address}</span>
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
-              </div>
-            )}
-            
             {/* TAB: SETTINGS */}
             {activeTab === 'settings' && (
               <div className="bg-white border border-gray-100 rounded-2xl shadow-sm p-5 sm:p-6 min-h-[400px]">

@@ -4,7 +4,28 @@ import { useEffect, useState } from "react";
 import axios from "axios";
 import { API_BASE_URL } from "@/lib/api";
 import { useParams, useRouter } from "next/navigation";
-import { ArrowLeft, ShoppingCart, Info, List, CheckCircle2 } from "lucide-react";
+import { 
+  ArrowLeft, 
+  ShoppingCart, 
+  Info, 
+  List, 
+  CheckCircle2, 
+  Star,
+  Send,
+  User,
+  MessageSquare,
+  Loader2
+} from "lucide-react";
+
+interface ProductScore {
+  id: number;
+  productId: string;
+  number: string;
+  fullName: string;
+  comment: string | null;
+  grade: number;
+  createdAt: string;
+}
 
 interface Product {
   id: number;
@@ -17,6 +38,9 @@ interface Product {
   price: number;
   categoryId: number;
   active: boolean;
+  scores?: ProductScore[];
+  rating?: number;
+  reviewCount?: number;
 }
 
 export default function ProductDetailsPage() {
@@ -24,23 +48,51 @@ export default function ProductDetailsPage() {
   const router = useRouter();
   const [product, setProduct] = useState<Product | null>(null);
   const [loading, setLoading] = useState(true);
+  const [reviews, setReviews] = useState<ProductScore[]>([]);
+  const [rating, setRating] = useState({ average: 0, count: 0 });
+  
+  // Review form state
+  const [reviewGrade, setReviewGrade] = useState(5);
+  const [reviewComment, setReviewComment] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [hoverRating, setHoverRating] = useState(0);
 
   useEffect(() => {
-    const fetchProduct = async () => {
-      try {
-        const decodedName = decodeURIComponent(productName as string);
-        const res = await axios.get(`${API_BASE_URL}/admin/product`);
-        const found = res.data.find((p: Product) => p.name === decodedName && p.active !== false);
-        setProduct(found || null);
-      } catch (err) {
-        console.error("Error fetching product", err);
-      } finally {
-        setLoading(false);
-      }
-    };
+    const token = localStorage.getItem("accessToken");
+    setIsLoggedIn(!!token);
+  }, []);
 
+  const fetchProductAndReviews = async () => {
+    try {
+      const decodedName = decodeURIComponent(productName as string);
+      const res = await axios.get(`${API_BASE_URL}/admin/product`);
+      const found = res.data.find((p: Product) => p.name === decodedName && p.active !== false);
+      
+      if (found) {
+        setProduct(found);
+        
+        // Fetch reviews and rating
+        const [reviewsRes, ratingRes] = await Promise.all([
+          axios.get(`${API_BASE_URL}/score/product/${found.productId}`),
+          axios.get(`${API_BASE_URL}/score/rating/${found.productId}`)
+        ]);
+        
+        setReviews(reviewsRes.data);
+        setRating(ratingRes.data);
+      } else {
+        setProduct(null);
+      }
+    } catch (err) {
+      console.error("Error fetching product", err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
     if (productName) {
-      fetchProduct();
+      fetchProductAndReviews();
     }
   }, [productName]);
 
@@ -58,17 +110,92 @@ export default function ProductDetailsPage() {
         { productId, productCount: 1 },
         { headers: { Authorization: `Bearer ${token}` } }
       );
-      // alert("Mahsulot savatga qo'shildi!");
     } catch (err: any) {
       console.error(err);
       if (axios.isAxiosError(err) && err.response?.status === 401) {
         localStorage.removeItem("accessToken");
-        alert("Sessiya vaqti tugagan yoki xatolik. Iltimos qayta tizimga kiring.");
+        alert("Sessiya vaqti tugagan. Iltimos qayta tizimga kiring.");
         router.push("/login");
       } else {
-        alert("Xatolik yuz berdi yoki avtorizatsiyadan o'tmagansiz.");
+        alert("Xatolik yuz berdi.");
       }
     }
+  };
+
+  const submitReview = async () => {
+    const token = localStorage.getItem("accessToken");
+    if (!token) {
+      alert("Izoh qoldirish uchun tizimga kiring!");
+      router.push("/login");
+      return;
+    }
+
+    if (!product) return;
+
+    setSubmitting(true);
+    try {
+      await axios.post(
+        `${API_BASE_URL}/score`,
+        {
+          productId: product.productId,
+          comment: reviewComment.trim() || null,
+          grade: reviewGrade,
+        },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      
+      // Refresh reviews
+      await fetchProductAndReviews();
+      setReviewComment("");
+      setReviewGrade(5);
+    } catch (err: any) {
+      console.error(err);
+      if (axios.isAxiosError(err) && err.response?.status === 401) {
+        localStorage.removeItem("accessToken");
+        alert("Sessiya vaqti tugagan. Iltimos qayta tizimga kiring.");
+        router.push("/login");
+      } else {
+        alert("Izoh yuborishda xatolik.");
+      }
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const StarRating = ({ rating, size = 20, interactive = false }: { rating: number; size?: number; interactive?: boolean }) => {
+    return (
+      <div className="flex items-center gap-0.5">
+        {[1, 2, 3, 4, 5].map((star) => (
+          <button
+            key={star}
+            type="button"
+            disabled={!interactive}
+            onClick={() => interactive && setReviewGrade(star)}
+            onMouseEnter={() => interactive && setHoverRating(star)}
+            onMouseLeave={() => interactive && setHoverRating(0)}
+            className={`${interactive ? 'cursor-pointer hover:scale-110 transition-transform' : 'cursor-default'}`}
+          >
+            <Star
+              size={size}
+              className={`${
+                star <= (interactive ? (hoverRating || reviewGrade) : rating)
+                  ? 'text-yellow-400 fill-yellow-400'
+                  : 'text-gray-300'
+              } transition-colors`}
+            />
+          </button>
+        ))}
+      </div>
+    );
+  };
+
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('uz-UZ', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+    });
   };
 
   if (loading) {
@@ -107,7 +234,7 @@ export default function ProductDetailsPage() {
           <div className="flex flex-col lg:flex-row">
             
             {/* Image Section */}
-            <div className="lg:w-1/2 bg-gray-100 p-8 flex items-center justify-center relative min-h-[300px] lg:min-h-[500px]">
+            <div className="lg:w-1/2 bg-gradient-to-br from-gray-50 to-gray-100 p-8 flex items-center justify-center relative min-h-[300px] lg:min-h-[500px]">
               {product.photoUrl ? (
                 <img 
                   src={`${API_BASE_URL}${product.photoUrl}`} 
@@ -128,9 +255,16 @@ export default function ProductDetailsPage() {
 
             {/* Content Section */}
             <div className="lg:w-1/2 p-8 lg:p-12 flex flex-col">
-              <h1 className="text-3xl lg:text-4xl font-extrabold text-gray-900 mb-6 leading-tight">
+              <h1 className="text-3xl lg:text-4xl font-extrabold text-gray-900 mb-4 leading-tight">
                 {product.name}
               </h1>
+
+              {/* Rating Display */}
+              <div className="flex items-center gap-3 mb-6 pb-6 border-b border-gray-100">
+                <StarRating rating={rating.average} size={24} />
+                <span className="text-2xl font-bold text-gray-900">{rating.average.toFixed(1)}</span>
+                <span className="text-gray-500">({rating.count} ta izoh)</span>
+              </div>
 
               <div className="space-y-8 flex-1">
                 {product.description && (
@@ -170,7 +304,7 @@ export default function ProductDetailsPage() {
               <div className="mt-10 pt-8 border-t border-gray-100">
                 <button
                   onClick={() => addToCart(product.productId)}
-                  className="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-4 rounded-2xl shadow-lg shadow-green-200 transition duration-300 flex items-center justify-center gap-3 text-lg hover:-translate-y-1"
+                  className="w-full bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white font-bold py-4 rounded-2xl shadow-lg shadow-green-200 transition duration-300 flex items-center justify-center gap-3 text-lg hover:-translate-y-1"
                 >
                   <ShoppingCart size={24} />
                   Savatga qo'shish
@@ -178,6 +312,121 @@ export default function ProductDetailsPage() {
               </div>
 
             </div>
+          </div>
+        </div>
+
+        {/* Reviews Section */}
+        <div className="mt-12 space-y-8">
+          
+          {/* Write Review Form */}
+          <div className="bg-white rounded-3xl shadow-xl border border-gray-100 p-8">
+            <h2 className="text-2xl font-bold text-gray-900 mb-6 flex items-center gap-3">
+              <MessageSquare className="text-green-500" size={28} />
+              Izoh qoldirish
+            </h2>
+
+            {isLoggedIn ? (
+              <div className="space-y-6">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-3">
+                    Bahoingiz
+                  </label>
+                  <div className="flex items-center gap-4">
+                    <StarRating rating={reviewGrade} size={32} interactive />
+                    <span className="text-lg font-semibold text-gray-700">
+                      {reviewGrade} / 5
+                    </span>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-3">
+                    Izohingiz (ixtiyoriy)
+                  </label>
+                  <textarea
+                    value={reviewComment}
+                    onChange={(e) => setReviewComment(e.target.value)}
+                    placeholder="Mahsulot haqida fikringizni yozing..."
+                    rows={4}
+                    className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-green-500 focus:outline-none resize-none transition-colors"
+                  />
+                </div>
+
+                <button
+                  onClick={submitReview}
+                  disabled={submitting}
+                  className="flex items-center justify-center gap-2 bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white font-bold py-3 px-8 rounded-xl shadow-lg shadow-green-200 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {submitting ? (
+                    <>
+                      <Loader2 size={20} className="animate-spin" />
+                      Yuborilmoqda...
+                    </>
+                  ) : (
+                    <>
+                      <Send size={20} />
+                      Izoh yuborish
+                    </>
+                  )}
+                </button>
+              </div>
+            ) : (
+              <div className="text-center py-8 bg-gray-50 rounded-2xl">
+                <User size={48} className="mx-auto text-gray-400 mb-4" />
+                <p className="text-gray-600 mb-4">Izoh qoldirish uchun tizimga kiring</p>
+                <button
+                  onClick={() => router.push('/login')}
+                  className="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-6 rounded-xl transition-colors"
+                >
+                  Kirish
+                </button>
+              </div>
+            )}
+          </div>
+
+          {/* Reviews List */}
+          <div className="bg-white rounded-3xl shadow-xl border border-gray-100 p-8">
+            <h2 className="text-2xl font-bold text-gray-900 mb-6 flex items-center gap-3">
+              <Star className="text-yellow-400 fill-yellow-400" size={28} />
+              Izohlar ({reviews.length})
+            </h2>
+
+            {reviews.length === 0 ? (
+              <div className="text-center py-12 bg-gray-50 rounded-2xl">
+                <MessageSquare size={48} className="mx-auto text-gray-300 mb-4" />
+                <p className="text-gray-500">Hali izoh qoldirilmagan</p>
+                <p className="text-sm text-gray-400 mt-2">Birinchi bo'lib izoh qoldiring!</p>
+              </div>
+            ) : (
+              <div className="space-y-6">
+                {reviews.map((review) => (
+                  <div 
+                    key={review.id}
+                    className="border-b border-gray-100 last:border-0 pb-6 last:pb-0"
+                  >
+                    <div className="flex items-start gap-4">
+                      <div className="w-12 h-12 bg-gradient-to-br from-green-400 to-green-600 rounded-full flex items-center justify-center text-white font-bold text-lg shrink-0">
+                        {review.fullName.charAt(0).toUpperCase()}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex flex-wrap items-center gap-2 mb-2">
+                          <span className="font-bold text-gray-900">{review.fullName}</span>
+                          <StarRating rating={review.grade} size={16} />
+                        </div>
+                        {review.comment && (
+                          <p className="text-gray-600 leading-relaxed mb-2">
+                            {review.comment}
+                          </p>
+                        )}
+                        <p className="text-sm text-gray-400">
+                          {formatDate(review.createdAt)}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         </div>
       </div>

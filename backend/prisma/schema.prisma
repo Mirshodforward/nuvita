@@ -31,35 +31,79 @@ model User {
 }
 
 model Category {
-  id          Int       @id @default(autoincrement())
-  name        String    @unique
-  description String?
-  isActive    Boolean   @default(true) @map("is_active")
-  createdAt   DateTime  @default(now()) @map("created_at")
-  updatedAt   DateTime  @updatedAt @map("updated_at")
-  products    Product[]
+  id           Int                   @id @default(autoincrement())
+  name         String                @unique // Default UZ
+  description  String?               // Default UZ
+  isActive     Boolean               @default(true) @map("is_active")
+  createdAt    DateTime              @default(now()) @map("created_at")
+  updatedAt    DateTime              @updatedAt @map("updated_at")
+  products     Product[]
+  translations CategoryTranslation[]
 
   @@map("categories")
 }
 
+model CategoryTranslation {
+  id          Int      @id @default(autoincrement())
+  categoryId  Int      @map("category_id")
+  lang        Lang     // RU yoki EN
+  name        String
+  description String?
+  category    Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+
+  @@unique([categoryId, lang])
+  @@map("category_translations")
+}
+
+
+
 model Product {
-  id          Int        @id @default(autoincrement())
-  productId   String     @unique @map("product_id")
-  photoUrl    String?    @map("photo_url")
-  category    String
+  id           Int                  @id @default(autoincrement())
+  productId    String               @unique @map("product_id")
+  photoUrl     String?              @map("photo_url")
+  category     String
+  name         String               // Default UZ
+  ingredients  String?              // Default UZ
+  uses         String?              // Default UZ
+  description  String?              // Default UZ
+  price        Float
+  amount       Int                  @default(0)
+  isActive     Boolean              @default(true) @map("is_active")
+  createdAt    DateTime             @default(now()) @map("created_at")
+  updatedAt    DateTime             @updatedAt @map("updated_at")
+  cartItems    CartItem[]
+  categoryRel  Category             @relation(fields: [category], references: [name])
+  translations ProductTranslation[]
+  scores       ProductScore[]
+
+  @@map("products")
+}
+
+model ProductTranslation {
+  id          Int      @id @default(autoincrement())
+  productId   Int      @map("product_id")
+  lang        Lang     // RU yoki EN
   name        String
   ingredients String?
   uses        String?
   description String?
-  price       Float
-  amount      Int        @default(0)
-  isActive    Boolean    @default(true) @map("is_active")
-  createdAt   DateTime   @default(now()) @map("created_at")
-  updatedAt   DateTime   @updatedAt @map("updated_at")
-  cartItems   CartItem[]
-  categoryRel Category   @relation(fields: [category], references: [name])
+  product     Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
 
-  @@map("products")
+  @@unique([productId, lang])
+  @@map("product_translations")
+}
+
+model ProductScore {
+  id        Int      @id @default(autoincrement())
+  productId String   @map("product_id")
+  number    String   // User phone number
+  fullName  String   @map("full_name")
+  comment   String?
+  grade     Int      @default(0) // 0-5
+  createdAt DateTime @default(now()) @map("created_at")
+  product   Product  @relation(fields: [productId], references: [productId], onDelete: Cascade)
+
+  @@map("product_scores")
 }
 
 model CartItem {

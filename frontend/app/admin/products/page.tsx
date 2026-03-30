@@ -9,6 +9,15 @@ interface Category {
   name: string;
 }
 
+interface ProductTranslation {
+  id: number;
+  lang: 'RU' | 'EN';
+  name: string;
+  ingredients: string | null;
+  uses: string | null;
+  description: string | null;
+}
+
 interface Product {
   id: number;
   productId: string;
@@ -22,6 +31,7 @@ interface Product {
   amount: number;
   isActive: boolean;
   createdAt: string;
+  translations?: ProductTranslation[];
 }
 
 export default function ProductsPage() {
@@ -31,7 +41,7 @@ export default function ProductsPage() {
   const [showModal, setShowModal] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
 
-  // Form states
+  // Form states - UZ (default)
   const [name, setName] = useState("");
   const [category, setCategory] = useState("");
   const [price, setPrice] = useState<number>(0);
@@ -40,6 +50,18 @@ export default function ProductsPage() {
   const [uses, setUses] = useState("");
   const [description, setDescription] = useState("");
   const [file, setFile] = useState<File | null>(null);
+  
+  // Form states - RU
+  const [nameRu, setNameRu] = useState("");
+  const [ingredientsRu, setIngredientsRu] = useState("");
+  const [usesRu, setUsesRu] = useState("");
+  const [descriptionRu, setDescriptionRu] = useState("");
+  
+  // Form states - EN
+  const [nameEn, setNameEn] = useState("");
+  const [ingredientsEn, setIngredientsEn] = useState("");
+  const [usesEn, setUsesEn] = useState("");
+  const [descriptionEn, setDescriptionEn] = useState("");
   
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -81,6 +103,20 @@ export default function ProductsPage() {
       setIngredients(prod.ingredients || "");
       setUses(prod.uses || "");
       setDescription(prod.description || "");
+      
+      // RU translation
+      const ruTrans = prod.translations?.find(t => t.lang === 'RU');
+      setNameRu(ruTrans?.name || "");
+      setIngredientsRu(ruTrans?.ingredients || "");
+      setUsesRu(ruTrans?.uses || "");
+      setDescriptionRu(ruTrans?.description || "");
+      
+      // EN translation
+      const enTrans = prod.translations?.find(t => t.lang === 'EN');
+      setNameEn(enTrans?.name || "");
+      setIngredientsEn(enTrans?.ingredients || "");
+      setUsesEn(enTrans?.uses || "");
+      setDescriptionEn(enTrans?.description || "");
     } else {
       setEditingId(null);
       setName("");
@@ -90,6 +126,16 @@ export default function ProductsPage() {
       setIngredients("");
       setUses("");
       setDescription("");
+      // Reset RU
+      setNameRu("");
+      setIngredientsRu("");
+      setUsesRu("");
+      setDescriptionRu("");
+      // Reset EN
+      setNameEn("");
+      setIngredientsEn("");
+      setUsesEn("");
+      setDescriptionEn("");
     }
     setFile(null);
     if (fileInputRef.current) {
@@ -119,6 +165,19 @@ export default function ProductsPage() {
       formData.append("ingredients", ingredients);
       formData.append("uses", uses);
       formData.append("description", description);
+      
+      // RU translations
+      if (nameRu) formData.append("nameRu", nameRu);
+      if (ingredientsRu) formData.append("ingredientsRu", ingredientsRu);
+      if (usesRu) formData.append("usesRu", usesRu);
+      if (descriptionRu) formData.append("descriptionRu", descriptionRu);
+      
+      // EN translations
+      if (nameEn) formData.append("nameEn", nameEn);
+      if (ingredientsEn) formData.append("ingredientsEn", ingredientsEn);
+      if (usesEn) formData.append("usesEn", usesEn);
+      if (descriptionEn) formData.append("descriptionEn", descriptionEn);
+      
       if (file) {
         formData.append("photo", file);
       }
@@ -258,8 +317,13 @@ export default function ProductsPage() {
                 />
               </div>
 
+              {/* UZ (Default) */}
+              <div className="md:col-span-2">
+                <h3 className="text-lg font-semibold text-green-700 mb-1">🇺🇿 O'zbekcha (asosiy)</h3>
+              </div>
+
               <div>
-                <label className="block text-sm font-medium text-gray-700">Nomi</label>
+                <label className="block text-sm font-medium text-gray-700">Nomi (UZ)</label>
                 <input
                   required
                   type="text"
@@ -309,7 +373,7 @@ export default function ProductsPage() {
               </div>
 
               <div className="md:col-span-2">
-                <label className="block text-sm font-medium text-gray-700">Tarkibi (Ingredients)</label>
+                <label className="block text-sm font-medium text-gray-700">Tarkibi (Ingredients) - UZ</label>
                 <textarea
                   value={ingredients}
                   onChange={(e) => setIngredients(e.target.value)}
@@ -319,7 +383,7 @@ export default function ProductsPage() {
               </div>
 
               <div className="md:col-span-2">
-                <label className="block text-sm font-medium text-gray-700">Ishlatilishi (Uses)</label>
+                <label className="block text-sm font-medium text-gray-700">Ishlatilishi (Uses) - UZ</label>
                 <textarea
                   value={uses}
                   onChange={(e) => setUses(e.target.value)}
@@ -329,12 +393,110 @@ export default function ProductsPage() {
               </div>
 
               <div className="md:col-span-2">
-                <label className="block text-sm font-medium text-gray-700">Qo'shimcha tavsif (Description)</label>
+                <label className="block text-sm font-medium text-gray-700">Qo'shimcha tavsif (Description) - UZ</label>
                 <textarea
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
                   className="mt-1 block w-full rounded-md border-gray-300 shadow-sm outline outline-1 outline-gray-300 px-3 py-2"
                   rows={3}
+                ></textarea>
+              </div>
+
+              {/* RU Translations */}
+              <div className="md:col-span-2 border-t pt-4 mt-2">
+                <h3 className="text-lg font-semibold text-blue-700 mb-3">🇷🇺 Ruscha tarjima</h3>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700">Nomi (RU)</label>
+                <input
+                  type="text"
+                  value={nameRu}
+                  onChange={(e) => setNameRu(e.target.value)}
+                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:ring-blue-500 outline outline-1 outline-gray-300 px-3 py-2"
+                  placeholder="Название продукта"
+                />
+              </div>
+
+              <div className="md:col-span-2">
+                <label className="block text-sm font-medium text-gray-700">Tarkibi (RU)</label>
+                <textarea
+                  value={ingredientsRu}
+                  onChange={(e) => setIngredientsRu(e.target.value)}
+                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm outline outline-1 outline-gray-300 px-3 py-2"
+                  rows={2}
+                  placeholder="Состав"
+                ></textarea>
+              </div>
+
+              <div className="md:col-span-2">
+                <label className="block text-sm font-medium text-gray-700">Ishlatilishi (RU)</label>
+                <textarea
+                  value={usesRu}
+                  onChange={(e) => setUsesRu(e.target.value)}
+                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm outline outline-1 outline-gray-300 px-3 py-2"
+                  rows={2}
+                  placeholder="Применение"
+                ></textarea>
+              </div>
+
+              <div className="md:col-span-2">
+                <label className="block text-sm font-medium text-gray-700">Tavsif (RU)</label>
+                <textarea
+                  value={descriptionRu}
+                  onChange={(e) => setDescriptionRu(e.target.value)}
+                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm outline outline-1 outline-gray-300 px-3 py-2"
+                  rows={2}
+                  placeholder="Описание"
+                ></textarea>
+              </div>
+
+              {/* EN Translations */}
+              <div className="md:col-span-2 border-t pt-4 mt-2">
+                <h3 className="text-lg font-semibold text-purple-700 mb-3">🇬🇧 Inglizcha tarjima</h3>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700">Nomi (EN)</label>
+                <input
+                  type="text"
+                  value={nameEn}
+                  onChange={(e) => setNameEn(e.target.value)}
+                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:ring-purple-500 outline outline-1 outline-gray-300 px-3 py-2"
+                  placeholder="Product name"
+                />
+              </div>
+
+              <div className="md:col-span-2">
+                <label className="block text-sm font-medium text-gray-700">Tarkibi (EN)</label>
+                <textarea
+                  value={ingredientsEn}
+                  onChange={(e) => setIngredientsEn(e.target.value)}
+                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm outline outline-1 outline-gray-300 px-3 py-2"
+                  rows={2}
+                  placeholder="Ingredients"
+                ></textarea>
+              </div>
+
+              <div className="md:col-span-2">
+                <label className="block text-sm font-medium text-gray-700">Ishlatilishi (EN)</label>
+                <textarea
+                  value={usesEn}
+                  onChange={(e) => setUsesEn(e.target.value)}
+                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm outline outline-1 outline-gray-300 px-3 py-2"
+                  rows={2}
+                  placeholder="Uses"
+                ></textarea>
+              </div>
+
+              <div className="md:col-span-2">
+                <label className="block text-sm font-medium text-gray-700">Tavsif (EN)</label>
+                <textarea
+                  value={descriptionEn}
+                  onChange={(e) => setDescriptionEn(e.target.value)}
+                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm outline outline-1 outline-gray-300 px-3 py-2"
+                  rows={2}
+                  placeholder="Description"
                 ></textarea>
               </div>
 

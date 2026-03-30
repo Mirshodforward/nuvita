@@ -4,6 +4,9 @@ import "./globals.css";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import FloatingCart from '@/components/FloatingCart';
+
+
+
 import Script from "next/script";
 
 const geistSans = Geist({
@@ -29,19 +32,22 @@ export default function RootLayout({
   return (
     <html
       lang="uz"
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
+      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased scroll-smooth`}
+      suppressHydrationWarning
     >
       <head>
         <Script 
           src="https://telegram.org/js/telegram-web-app.js" 
           strategy="beforeInteractive"
         />
+        
       </head>
       <body className="min-h-full flex flex-col">
         <Header />
         <main className="flex-1">
           {children}
         </main>
+        
         <FloatingCart />
         <Footer />
       </body>

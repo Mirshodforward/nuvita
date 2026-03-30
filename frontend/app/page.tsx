@@ -1,12 +1,29 @@
 
 "use client";
 
-import { useEffect, useState, Suspense } from "react";
+import { useEffect, useState, Suspense, useRef } from "react";
 import axios from "axios";
 import { API_BASE_URL } from "@/lib/api";
-import { ShoppingCart, Plus, Minus, Loader2 } from "lucide-react";
-import { useSearchParams, useRouter } from "next/navigation";
-import { getTelegramWebApp, isTelegramMiniApp } from "@/lib/telegram";
+import { 
+  ShoppingCart, 
+  Plus, 
+  Minus, 
+  ArrowRight, 
+  Phone,
+  ChevronRight,
+  ChevronLeft,
+  Grid3X3
+} from "lucide-react";
+import { useSearchParams } from "next/navigation";
+import Link from "next/link";
+import ContactPage from "@/app/contact/page";
+
+interface Category {
+  id: number;
+  name: string;
+  description: string;
+  isActive: boolean;
+}
 
 interface Product {
   id: number;
@@ -26,32 +43,186 @@ interface CartItem {
   productCount: number;
 }
 
+// Product Card Component
+function ProductCard({ 
+  product, 
+  cartItem, 
+  onAddToCart, 
+  onUpdateCount 
+}: { 
+  product: Product; 
+  cartItem?: CartItem; 
+  onAddToCart: (productId: string) => void;
+  onUpdateCount: (cartItemId: number, action: "increment" | "decrement") => void;
+}) {
+  return (
+    <div className="bg-white rounded-2xl overflow-hidden hover:shadow-xl transition-all duration-300 border border-gray-100 group flex flex-col h-full min-w-[160px] sm:min-w-[200px]">
+      <div className="relative h-40 sm:h-48 overflow-hidden bg-gray-50">
+        {product.photoUrl ? (
+          <img 
+            src={`${API_BASE_URL}` + product.photoUrl} 
+            alt={product.name} 
+            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" 
+          />
+        ) : (
+          <div className="w-full h-full flex items-center justify-center text-gray-300 text-sm">Rasm yo'q</div>
+        )}
+        <div className="absolute top-2 right-2 bg-white/95 backdrop-blur-sm px-2.5 py-1 rounded-full font-bold text-green-700 text-xs sm:text-sm shadow-sm">
+          {product.price?.toLocaleString()} so'm
+        </div>
+      </div>
+
+      <div className="p-3 sm:p-4 flex-1 flex flex-col">
+        <h4 className="text-sm sm:text-base font-bold text-gray-900 mb-1.5 line-clamp-2">{product.name}</h4>
+        <p className="text-xs text-gray-500 mb-3 line-clamp-2 flex-1 hidden sm:block">{product.ingredients}</p>
+
+        <div className="mt-auto">
+          {cartItem ? (
+            <div className="bg-green-50 border border-green-200 rounded-xl flex items-center justify-between px-1.5 py-1 h-10">
+              <button
+                onClick={() => onUpdateCount(cartItem.id, "decrement")}
+                className="bg-white p-1.5 rounded-lg text-gray-700 hover:bg-gray-50 transition"
+              >
+                <Minus size={16} />
+              </button>
+              <span className="font-bold text-sm px-2">{cartItem.productCount}</span>
+              <button
+                onClick={() => onUpdateCount(cartItem.id, "increment")}
+                className="bg-green-600 p-1.5 rounded-lg text-white hover:bg-green-700 transition"
+              >
+                <Plus size={16} />
+              </button>
+            </div>
+          ) : (
+            <button
+              onClick={() => onAddToCart(product.productId)}
+              className="w-full bg-green-600 hover:bg-green-700 text-white font-semibold py-2.5 rounded-xl transition text-sm flex items-center justify-center gap-1.5"
+            >
+              <ShoppingCart size={16} />
+              <span className="hidden sm:inline">Savatga</span>
+            </button>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Category Row Component with horizontal scroll
+function CategoryRow({ 
+  category, 
+  products, 
+  cartItems, 
+  onAddToCart, 
+  onUpdateCount 
+}: { 
+  category: Category; 
+  products: Product[]; 
+  cartItems: CartItem[];
+  onAddToCart: (productId: string) => void;
+  onUpdateCount: (cartItemId: number, action: "increment" | "decrement") => void;
+}) {
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const [canScrollLeft, setCanScrollLeft] = useState(false);
+  const [canScrollRight, setCanScrollRight] = useState(false);
+
+  const checkScroll = () => {
+    if (scrollRef.current) {
+      const { scrollLeft, scrollWidth, clientWidth } = scrollRef.current;
+      setCanScrollLeft(scrollLeft > 0);
+      setCanScrollRight(scrollLeft < scrollWidth - clientWidth - 10);
+    }
+  };
+
+  useEffect(() => {
+    checkScroll();
+    window.addEventListener('resize', checkScroll);
+    return () => window.removeEventListener('resize', checkScroll);
+  }, [products]);
+
+  const scroll = (direction: 'left' | 'right') => {
+    if (scrollRef.current) {
+      const scrollAmount = direction === 'left' ? -300 : 300;
+      scrollRef.current.scrollBy({ left: scrollAmount, behavior: 'smooth' });
+      setTimeout(checkScroll, 300);
+    }
+  };
+
+  if (products.length === 0) return null;
+
+  return (
+    <div className="mb-12">
+      {/* Category Header */}
+      <div className="flex items-center justify-between mb-5">
+        <div className="flex items-center gap-3">
+          <div className="w-1 h-8 bg-green-500 rounded-full"></div>
+          <h3 className="text-xl sm:text-2xl font-bold text-gray-900">{category.name}</h3>
+          <span className="text-sm text-gray-400 font-medium">({products.length})</span>
+        </div>
+        <Link 
+          href={`/catalog?category=${category.id}`}
+          className="flex items-center gap-1.5 text-green-600 hover:text-green-700 font-semibold text-sm transition-colors group"
+        >
+          Hammasi
+          <ArrowRight size={18} className="group-hover:translate-x-1 transition-transform" />
+        </Link>
+      </div>
+
+      {/* Products Row */}
+      <div className="relative group/container">
+        {/* Left Arrow */}
+        {canScrollLeft && (
+          <button 
+            onClick={() => scroll('left')}
+            className="absolute left-0 top-1/2 -translate-y-1/2 z-10 bg-white/95 hover:bg-white shadow-lg rounded-full p-2 opacity-0 group-hover/container:opacity-100 transition-opacity -ml-3"
+          >
+            <ChevronLeft size={24} className="text-gray-700" />
+          </button>
+        )}
+
+        {/* Products Container */}
+        <div 
+          ref={scrollRef}
+          onScroll={checkScroll}
+          className="flex gap-4 overflow-x-auto scrollbar-hide pb-2 scroll-smooth"
+          style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+        >
+          {products.map(product => {
+            const cartItem = cartItems.find(item => item.productId === product.productId);
+            return (
+              <div key={product.id} className="flex-shrink-0 w-[160px] sm:w-[200px]">
+                <ProductCard 
+                  product={product} 
+                  cartItem={cartItem} 
+                  onAddToCart={onAddToCart}
+                  onUpdateCount={onUpdateCount}
+                />
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Right Arrow */}
+        {canScrollRight && (
+          <button 
+            onClick={() => scroll('right')}
+            className="absolute right-0 top-1/2 -translate-y-1/2 z-10 bg-white/95 hover:bg-white shadow-lg rounded-full p-2 opacity-0 group-hover/container:opacity-100 transition-opacity -mr-3"
+          >
+            <ChevronRight size={24} className="text-gray-700" />
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}
+
 function ProductList() {
+  const [categories, setCategories] = useState<Category[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
   const [loading, setLoading] = useState(true);
-  const [redirecting, setRedirecting] = useState(false);
   const searchParams = useSearchParams();
   const searchQuery = searchParams.get("q") || "";
-  const router = useRouter();
-
-  // Check for Telegram Mini App startapp parameter and redirect to register page
-  useEffect(() => {
-    if (isTelegramMiniApp()) {
-      const webApp = getTelegramWebApp();
-      webApp?.ready();
-      webApp?.expand();
-      
-      const startParam = webApp?.initDataUnsafe?.start_param;
-      
-      if (startParam) {
-        // Token detected - redirect to register page for password setup
-        setRedirecting(true);
-        router.replace('/register');
-        return;
-      }
-    }
-  }, [router]);
 
   const fetchCartOptions = async () => {
     const token = localStorage.getItem("accessToken");
@@ -73,9 +244,14 @@ function ProductList() {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const prodRes = await axios.get(`${API_BASE_URL}/admin/product`);
+        const [prodRes, catRes] = await Promise.all([
+          axios.get(`${API_BASE_URL}/admin/product`),
+          axios.get(`${API_BASE_URL}/admin/category`)
+        ]);
         const activeProducts = prodRes.data.filter((p: any) => p.active !== false);
+        const activeCategories = catRes.data.filter((c: any) => c.isActive !== false);
         setProducts(activeProducts);
+        setCategories(activeCategories);
       } catch (err) {
         console.error("Error fetching data", err);
       } finally {
@@ -131,92 +307,131 @@ function ProductList() {
     p.name.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  // Show loading while redirecting to register page
-  if (redirecting) {
-    return (
-      <div className="flex flex-col items-center justify-center min-h-screen bg-gray-50">
-        <Loader2 className="w-10 h-10 text-green-600 animate-spin" />
-        <p className="mt-4 text-gray-600">Parol o'rnatish sahifasiga yo'naltirilmoqda...</p>
-      </div>
-    );
-  }
-
   if (loading) return <div className="text-center py-20 text-gray-500 font-medium text-lg">Yuklanmoqda...</div>;
 
   return (
-    <div className="bg-gray-50 pb-32 min-h-screen">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 space-y-16">
-        <section>
-          <div className="flex justify-between items-end mb-8 border-l-4 border-green-500 pl-4">
-            <h3 className="text-3xl font-extrabold text-gray-800">
-              {searchQuery ? `"${searchQuery}" bo'yicha natijalar` : "Barcha Mahsulotlar"}
-            </h3>
-          </div>
-
-          {filteredProducts.length === 0 ? (
-            <p className="text-gray-500 italic bg-white p-6 rounded-xl shadow-sm border text-center">
-              {searchQuery ? "Hech qanday mahsulot topilmadi." : "Hozircha faol mahsulotlar mavjud emas."}
-            </p>
-          ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
-              {filteredProducts.map(p => { 
-                const cartItem = cartItems.find((item) => item.productId === p.productId); 
-                return (
-                <div key={p.id} className="bg-white rounded-3xl overflow-hidden hover:shadow-2xl transition-all duration-300 border border-gray-100 group flex flex-col h-full">
-                  <div className="relative h-60 overflow-hidden bg-gray-100">
-                    {p.photoUrl ? (
-                      <img src={`${API_BASE_URL}` + p.photoUrl} alt={p.name} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center text-gray-400 font-medium">Rasm yo'q</div>
-                    )}
-                    <div className="absolute top-4 right-4 bg-white/90 backdrop-blur-sm px-4 py-1.5 rounded-full font-bold text-green-700 shadow-sm">
-                      {p.price?.toLocaleString()} so'm
-                    </div>
-                  </div>
-
-                  <div className="p-6 flex-1 flex flex-col">
-                    <h4 className="text-xl font-extrabold text-gray-900 mb-3 line-clamp-2">{p.name}</h4>
-                    <p className="text-sm text-gray-600 mb-4 line-clamp-3 flex-1">{p.ingredients}</p>
-
-                    <div className="mt-auto flex flex-col sm:flex-row gap-2">
-                        {cartItem ? (
-                          <div className="w-full sm:w-1/2 bg-green-50 border border-green-200 rounded-xl flex items-center justify-between px-2 py-1.5 h-[52px]">
-                            <button
-                              onClick={() => updateItemCount(cartItem.id, "decrement")}
-                              className="bg-white p-2 rounded-lg text-gray-700 hover:bg-gray-50 flex-1 flex justify-center shadow-sm transition"
-                            >
-                              <Minus size={20} />
-                            </button>
-                            <span className="font-bold text-lg px-2 flex-1 text-center">{cartItem.productCount}</span>
-                            <button
-                              onClick={() => updateItemCount(cartItem.id, "increment")}
-                              className="bg-green-600 p-2 rounded-lg text-white hover:bg-green-700 flex-1 flex justify-center shadow-sm transition"
-                            >
-                              <Plus size={20} />
-                            </button>
-                          </div>
-                        ) : (
-                          <button
-                            onClick={() => addToCart(p.productId)}
-                            className="w-full sm:w-1/2 bg-green-50 hover:bg-green-600 text-green-700 hover:text-white border border-green-200 hover:border-green-600 font-bold py-3.5 rounded-xl transition duration-300 flex items-center justify-center gap-2"
-                          >
-                            <ShoppingCart size={20} />
-                            Savatga
-                          </button>
-                        )}
-                        <button
-                          onClick={() => { window.location.href = "/" + encodeURIComponent(p.name); }}
-                          className="w-full sm:w-1/2 bg-blue-50 hover:bg-blue-600 text-blue-700 hover:text-white border border-blue-200 hover:border-blue-600 font-bold py-3.5 rounded-xl transition duration-300 flex items-center justify-center gap-2"
-                        >
-                          Batafsil
-                        </button>
-                    </div>
-                  </div>
-                </div>
-              )})}
+    <div className="bg-gray-50 pb-32 min-h-screen font-sans">
+      {/* Hero Section */}
+      {!searchQuery && (
+        <section className="bg-white border-b border-gray-100 overflow-hidden relative">
+          <div className="absolute top-0 inset-x-0 h-40 bg-gradient-to-b from-green-50/50 to-transparent pointer-events-none"></div>
+          
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 lg:py-32 relative z-10">
+            <div className="text-center max-w-4xl mx-auto">
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-green-50 text-green-700 font-medium text-sm mb-6 uppercase tracking-widest">
+                Tabiat va ilm-fan uyg'unligi
+              </div>
+              
+              <h1 className="text-5xl md:text-6xl lg:text-7xl font-extrabold text-gray-900 tracking-tight mb-8 leading-[1.1]">
+                Sog'lig'ingiz uchun <br className="hidden md:block" /> 
+                <span className="text-green-600">tabiiy</span> yechimlar
+              </h1>
+              
+              <p className="text-xl md:text-2xl text-gray-500 mb-12 max-w-2xl mx-auto leading-relaxed font-light">
+                Nuvita - oilangiz uchun eng sifatli, xavfsiz va ishonchli vositalar platformasi. O'zingiz va yaqinlaringiz salomatligi haqida qayg'uring.
+              </p>
+              
+              <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
+                <button 
+                  onClick={() => document.getElementById('products-section')?.scrollIntoView({ behavior: 'smooth' })}
+                  className="w-full sm:w-auto bg-green-600 hover:bg-green-700 text-white px-8 py-4 rounded-full font-semibold text-lg transition-colors flex items-center justify-center gap-2"
+                >
+                  Mahsulotlarni ko'rish
+                  <ChevronRight size={20} />
+                </button>
+                <Link 
+                  href="/contact"
+                  className="w-full sm:w-auto bg-white hover:bg-gray-50 text-gray-900 border border-gray-200 px-8 py-4 rounded-full font-semibold text-lg transition-colors flex items-center justify-center gap-2"
+                >
+                  <Phone size={20} className="text-gray-500" />
+                  Bog'lanish
+                </Link>
+              </div>
             </div>
-          )}
+          </div>
         </section>
+      )}
+
+      {/* Products Section */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16" id="products-section">
+        {/* Section Header */}
+        <div className="flex items-center justify-between mb-10">
+          <div className="border-l-4 border-green-500 pl-4">
+            <h2 className="text-2xl sm:text-3xl font-extrabold text-gray-900">
+              {searchQuery ? `"${searchQuery}" bo'yicha natijalar` : "Bizning mahsulotlar"}
+            </h2>
+            <p className="text-gray-500 mt-1 text-sm sm:text-base">Sifatli va sertifikatlangan mahsulotlar</p>
+          </div>
+          <Link 
+            href="/catalog"
+            className="hidden sm:flex items-center gap-2 bg-green-50 hover:bg-green-100 text-green-700 font-semibold px-5 py-2.5 rounded-full transition-colors"
+          >
+            <Grid3X3 size={18} />
+            Katalog
+          </Link>
+        </div>
+
+        {/* Search Results */}
+        {searchQuery ? (
+          <div>
+            {filteredProducts.length === 0 ? (
+              <p className="text-gray-500 italic bg-white p-6 rounded-xl shadow-sm border text-center">
+                Hech qanday mahsulot topilmadi.
+              </p>
+            ) : (
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
+                {filteredProducts.map(product => {
+                  const cartItem = cartItems.find(item => item.productId === product.productId);
+                  return (
+                    <ProductCard 
+                      key={product.id}
+                      product={product} 
+                      cartItem={cartItem} 
+                      onAddToCart={addToCart}
+                      onUpdateCount={updateItemCount}
+                    />
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        ) : (
+          /* Category-based Product Rows */
+          <div>
+            {categories.length === 0 && products.length === 0 ? (
+              <p className="text-gray-500 italic bg-white p-6 rounded-xl shadow-sm border text-center">
+                Hozircha faol mahsulotlar mavjud emas.
+              </p>
+            ) : (
+              <>
+                {categories.map(category => {
+                  const categoryProducts = products.filter(p => p.categoryId === category.id);
+                  return (
+                    <CategoryRow 
+                      key={category.id}
+                      category={category}
+                      products={categoryProducts}
+                      cartItems={cartItems}
+                      onAddToCart={addToCart}
+                      onUpdateCount={updateItemCount}
+                    />
+                  );
+                })}
+                
+                {/* Products without category */}
+                {products.filter(p => !categories.some(c => c.id === p.categoryId)).length > 0 && (
+                  <CategoryRow 
+                    category={{ id: 0, name: "Boshqa mahsulotlar", description: "", isActive: true }}
+                    products={products.filter(p => !categories.some(c => c.id === p.categoryId))}
+                    cartItems={cartItems}
+                    onAddToCart={addToCart}
+                    onUpdateCount={updateItemCount}
+                  />
+                )}
+              </>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );
@@ -224,9 +439,14 @@ function ProductList() {
 
 export default function Home() {
   return (
-    <Suspense fallback={<div className="text-center py-20">Yuklanmoqda...</div>}>
-      <ProductList />
-    </Suspense>
+    <>
+      <Suspense fallback={<div className="text-center py-20">Yuklanmoqda...</div>}>
+        <ProductList />
+      </Suspense>
+      <section id="contact">
+        <ContactPage />
+      </section>
+    </>
   )
 }
 

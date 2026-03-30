@@ -5,7 +5,7 @@ import { useEffect, useState, useRef } from 'react';
 import axios from 'axios';
 import { API_BASE_URL } from "@/lib/api";
 import { useRouter, usePathname } from 'next/navigation';
-import { ShoppingCart, Search, X } from 'lucide-react';
+import { ShoppingCart, Search, X, Menu, User } from 'lucide-react';
 import { isTelegramMiniApp, getTelegramInitData, getTelegramWebApp } from '@/lib/telegram';
 
 interface UserProfile {
@@ -45,6 +45,7 @@ export function Header() {
   
   const [searchQuery, setSearchQuery] = useState("");
   const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
   
   const searchInputRef = useRef<HTMLInputElement>(null);
@@ -190,6 +191,12 @@ export function Header() {
 
   const toggleSearch = () => {
     setIsSearchOpen(prev => !prev);
+    if (isMenuOpen) setIsMenuOpen(false);
+  };
+
+  const toggleMenu = () => {
+    setIsMenuOpen(prev => !prev);
+    if (isSearchOpen) setIsSearchOpen(false);
   };
 
   // Hide header on admin/profile pages
@@ -203,15 +210,36 @@ export function Header() {
     <header className={`bg-white/95 backdrop-blur-md shadow-sm border-b sticky top-0 z-50 transition-all duration-300 ${isScrolled ? 'shadow-md' : ''}`}>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-14 gap-3">
-          {/* Logo */}
-          <div className="flex items-center shrink-0">
-            <Link href="/" className="text-2xl font-bold text-green-600">       
+          {/* Logo & Mobile Menu */}
+          <div className="flex items-center shrink-0 gap-2">
+            <button 
+              onClick={toggleMenu}
+              className="md:hidden p-2 text-gray-600 hover:text-green-600 transition-colors bg-gray-50 rounded-xl"
+              aria-label="Menu"
+            >
+              {isMenuOpen ? <X size={20} /> : <Menu size={20} />}
+            </button>
+            <Link href="/" className="text-2xl font-bold text-green-600 mr-2 md:mr-6">       
               Nuvita
             </Link>
+            
+            {/* Desktop Navigation */}
+            <nav className="hidden md:flex items-center gap-6 text-sm font-medium text-gray-600">
+              <Link href="/" className="hover:text-green-600 transition-colors">
+                Asosiy
+              </Link>
+              <Link href="/catalog" className="hover:text-green-600 transition-colors">
+                Katalog
+              </Link>
+             
+              <a href="#contact" className="hover:text-green-600 transition-colors cursor-pointer">
+                Kontaktlar
+              </a>
+            </nav>
           </div>
           
           {/* Desktop Search */}
-          <div className="flex-1 max-w-xl hidden md:block">
+          <div className="flex-1 max-w-md hidden lg:block mx-4">
             <form onSubmit={handleSearch} className="relative">
               <input 
                 type="text" 
@@ -229,15 +257,17 @@ export function Header() {
           {/* Right side */}
           <div className="flex items-center gap-2 shrink-0">
             {/* Mobile search icon */}
-            <button 
-              onClick={toggleSearch}
-              className="md:hidden p-2 text-gray-600 hover:text-green-600 transition-colors bg-gray-50 rounded-xl"
-              aria-label="Search"
-            >
-              <Search size={22} />
-            </button>
+            <div className="flex md:hidden items-center gap-1">
+              <button 
+                onClick={toggleSearch}
+                className="p-2 text-gray-600 hover:text-green-600 transition-colors bg-gray-50 rounded-xl"
+                aria-label="Search"
+              >
+                <Search size={20} />
+              </button>
+            </div>
 
-            <Link href="/cart" className="relative p-2 text-gray-600 hover:text-green-600 transition-colors flex items-center gap-1 bg-gray-50 rounded-xl">     
+            <Link href="/cart" className="relative p-2 text-gray-600 hover:text-green-600 transition-colors flex items-center gap-1 bg-gray-50 rounded-xl ml-1">     
               <ShoppingCart size={22} />
               {cartCount > 0 && (
                 <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] font-bold w-5 h-5 flex items-center justify-center rounded-full border-2 border-white">
@@ -249,29 +279,17 @@ export function Header() {
             {token ? (
               <button
                 onClick={() => router.push('/profile')}
-                className="flex items-center gap-2 p-1 hover:bg-gray-50 rounded-xl transition-colors"
+                className="flex items-center justify-center w-10 h-10 bg-gray-100 hover:bg-gray-200 rounded-full transition-colors"
               >
                 {profile?.photoUrl ? (
                   <img 
                     src={profile.photoUrl} 
                     alt="Profile" 
-                    className="w-9 h-9 rounded-full object-cover border-2 border-green-500"
+                    className="w-full h-full rounded-full object-cover"
                   />
                 ) : (
-                  <div className="w-9 h-9 rounded-full bg-gradient-to-br from-green-400 to-green-600 flex items-center justify-center text-white font-bold text-sm">
-                    {displayName.charAt(0).toUpperCase()}
-                  </div>
+                  <User size={20} className="text-gray-600" />
                 )}
-                <div className="hidden lg:flex flex-col items-start">
-                  <span className="font-medium text-sm text-gray-800 leading-tight">
-                    {displayName}
-                  </span>
-                  {profile?.username && (
-                    <span className="text-xs text-gray-500 leading-tight">
-                      @{profile.username}
-                    </span>
-                  )}
-                </div>
               </button>
             ) : (
               <Link href="/login" className="text-white bg-green-600 hover:bg-green-700 px-4 py-2 rounded-xl font-medium transition-colors text-sm">
@@ -307,6 +325,40 @@ export function Header() {
               </button>
             </div>
           </form>
+        </div>
+
+        {/* Mobile Menu - Expandable */}
+        <div className={`md:hidden overflow-hidden transition-all duration-300 ease-in-out ${isMenuOpen ? 'max-h-60 pb-3 opacity-100' : 'max-h-0 pb-0 opacity-0'}`}>
+          <nav className="flex flex-col space-y-1 bg-gray-50 rounded-2xl p-2 border border-gray-100">
+            <Link 
+              href="/" 
+              onClick={() => setIsMenuOpen(false)}
+              className="px-4 py-3 rounded-xl hover:bg-white hover:shadow-sm text-gray-700 font-medium transition-all"
+            >
+              Asosiy sahifa
+            </Link>
+            <Link 
+              href="/catalog" 
+              onClick={() => setIsMenuOpen(false)}
+              className="px-4 py-3 rounded-xl hover:bg-white hover:shadow-sm text-gray-700 font-medium transition-all"
+            >
+              Katalog
+            </Link>
+            <Link 
+              href="/services" 
+              onClick={() => setIsMenuOpen(false)}
+              className="px-4 py-3 rounded-xl hover:bg-white hover:shadow-sm text-gray-700 font-medium transition-all"
+            >
+              Xizmatlarimiz
+            </Link>
+            <Link 
+              href="#contact" 
+              onClick={() => setIsMenuOpen(false)}
+              className="px-4 py-3 rounded-xl hover:bg-white hover:shadow-sm text-gray-700 font-medium transition-all"
+            >
+              Kontaktlar
+            </Link>
+          </nav>
         </div>
       </div>
     </header>

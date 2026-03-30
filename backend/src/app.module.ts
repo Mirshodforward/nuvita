@@ -12,6 +12,7 @@ import { CartModule } from './cart/cart.module';
 import { OrderModule } from './order/order.module';
 import { StaffModule } from './admin/staff/staff.module';
 import { SettingsModule } from './admin/settings/settings.module';
+import { ScoreModule } from './score/score.module';
 
 import { SettingsController } from './settings.controller';
 
@@ -30,6 +31,7 @@ import { SettingsController } from './settings.controller';
     OrderModule,
     StaffModule,
     SettingsModule,
+    ScoreModule,
   ],
   controllers: [AppController, SettingsController],
   providers: [AppService],

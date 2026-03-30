@@ -26,6 +26,25 @@ const storage = diskStorage({
   },
 });
 
+// Helper function to parse translation data from form-data
+function parseTranslationData(body: any) {
+  const translationRu = body.nameRu ? {
+    name: body.nameRu,
+    ingredients: body.ingredientsRu || undefined,
+    uses: body.usesRu || undefined,
+    description: body.descriptionRu || undefined,
+  } : undefined;
+
+  const translationEn = body.nameEn ? {
+    name: body.nameEn,
+    ingredients: body.ingredientsEn || undefined,
+    uses: body.usesEn || undefined,
+    description: body.descriptionEn || undefined,
+  } : undefined;
+
+  return { translationRu, translationEn };
+}
+
 @Controller('admin/product')
 export class ProductController {
   constructor(private readonly productService: ProductService) {}
@@ -34,11 +53,15 @@ export class ProductController {
   @UseInterceptors(FileInterceptor('photo', { storage }))
   create(@UploadedFile() file: Express.Multer.File, @Body() body: any) {
     const photoUrl = file ? `/ProductPhoto/${file.filename}` : undefined;
+    const { translationRu, translationEn } = parseTranslationData(body);
+    
     return this.productService.create({
       ...body,
       price: Number(body.price),
       amount: Number(body.amount),
       photoUrl,
+      translationRu,
+      translationEn,
     });
   }
 
@@ -72,6 +95,21 @@ export class ProductController {
     if (data.isActive !== undefined) {
       data.isActive = String(data.isActive) === 'true';
     }
+
+    // Parse translation data
+    const { translationRu, translationEn } = parseTranslationData(body);
+    data.translationRu = translationRu;
+    data.translationEn = translationEn;
+
+    // Remove individual translation fields from data
+    delete data.nameRu;
+    delete data.ingredientsRu;
+    delete data.usesRu;
+    delete data.descriptionRu;
+    delete data.nameEn;
+    delete data.ingredientsEn;
+    delete data.usesEn;
+    delete data.descriptionEn;
 
     return this.productService.update(+id, data);
   }
