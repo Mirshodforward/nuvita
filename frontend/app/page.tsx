@@ -57,23 +57,27 @@ function ProductCard({
 }) {
   return (
     <div className="bg-white rounded-2xl overflow-hidden hover:shadow-xl transition-all duration-300 border border-gray-100 group flex flex-col h-full min-w-[160px] sm:min-w-[200px]">
-      <div className="relative h-40 sm:h-48 overflow-hidden bg-gray-50">
-        {product.photoUrl ? (
-          <img 
-            src={`${API_BASE_URL}` + product.photoUrl} 
-            alt={product.name} 
-            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" 
-          />
-        ) : (
-          <div className="w-full h-full flex items-center justify-center text-gray-300 text-sm">Rasm yo'q</div>
-        )}
-        <div className="absolute top-2 right-2 bg-white/95 backdrop-blur-sm px-2.5 py-1 rounded-full font-bold text-green-700 text-xs sm:text-sm shadow-sm">
-          {product.price?.toLocaleString()} so'm
+      <Link href={`/${encodeURIComponent(product.name)}`} className="block">
+        <div className="relative h-40 sm:h-48 overflow-hidden bg-gray-50">
+          {product.photoUrl ? (
+            <img 
+              src={`${API_BASE_URL}` + product.photoUrl} 
+              alt={product.name} 
+              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" 
+            />
+          ) : (
+            <div className="w-full h-full flex items-center justify-center text-gray-300 text-sm">Rasm yo'q</div>
+          )}
+          <div className="absolute top-2 right-2 bg-white/95 backdrop-blur-sm px-2.5 py-1 rounded-full font-bold text-green-700 text-xs sm:text-sm shadow-sm">
+            {product.price?.toLocaleString()} so'm
+          </div>
         </div>
-      </div>
+      </Link>
 
       <div className="p-3 sm:p-4 flex-1 flex flex-col">
-        <h4 className="text-sm sm:text-base font-bold text-gray-900 mb-1.5 line-clamp-2">{product.name}</h4>
+        <Link href={`/${encodeURIComponent(product.name)}`}>
+          <h4 className="text-sm sm:text-base font-bold text-gray-900 mb-1.5 line-clamp-2 hover:text-green-600 transition-colors cursor-pointer">{product.name}</h4>
+        </Link>
         <p className="text-xs text-gray-500 mb-3 line-clamp-2 flex-1 hidden sm:block">{product.ingredients}</p>
 
         <div className="mt-auto">
