@@ -439,16 +439,88 @@ function ProductList() {
   );
 }
 
+function IntroScreen({ onComplete }: { onComplete: () => void }) {
+  const [mounted, setMounted] = useState(false);
+  const [isAnimatingOut, setIsAnimatingOut] = useState(false);
+
+  useEffect(() => {
+    // Kichik kechikish bilan yozuvlar chiqishini boshlash
+    const mountTimer = setTimeout(() => setMounted(true), 150);
+    const outTimer = setTimeout(() => setIsAnimatingOut(true), 2400); // x soniyadan keyin tepaga suriladi
+    const completeTimer = setTimeout(() => onComplete(), 3200); // to'liq tugash vaqti
+    
+    // Tizim orqasi skroll bo'lib ketmasligi uchun
+    document.body.style.overflow = 'hidden';
+    return () => {
+      clearTimeout(mountTimer);
+      clearTimeout(outTimer);
+      clearTimeout(completeTimer);
+      document.body.style.overflow = '';
+    };
+  }, [onComplete]);
+
+  const word = "Nuvitauz".split("");
+
+  return (
+    <div 
+      className={`fixed inset-0 z-[9999] flex flex-col items-center justify-center bg-white transition-all duration-[800ms] ease-[cubic-bezier(0.76,0,0.24,1)] ${
+        isAnimatingOut ? '-translate-y-full rounded-b-[40%]' : 'translate-y-0'
+      }`}
+    >
+      <div className="flex overflow-hidden p-2">
+        {word.map((char, i) => (
+          <span
+            key={i}
+            className="text-6xl md:text-8xl lg:text-9xl font-black text-green-600 transform transition-transform duration-[800ms] ease-[cubic-bezier(0.34,1.56,0.64,1)]"
+            style={{ 
+              transform: mounted ? 'translateY(0)' : 'translateY(110%)',
+              transitionDelay: mounted ? `${i * 80}ms` : '0ms'
+            }}
+          >
+            {char}
+          </span>
+        ))}
+      </div>
+      
+      {/* Zamonaviy 'loading' chizig'i */}
+      <div 
+        className="mt-8 h-1 bg-gray-100 rounded-full overflow-hidden w-64 md:w-80 relative transition-opacity duration-700 delay-500"
+        style={{ opacity: mounted ? 1 : 0 }}
+      >
+        <div 
+          className="absolute top-0 left-0 h-full bg-green-500 rounded-full transition-all duration-[2000ms] ease-out"
+          style={{ width: mounted ? '100%' : '0%' }}
+        />
+      </div>
+    </div>
+  );
+}
+
 export default function Home() {
+  const [showSplash, setShowSplash] = useState(true);
+
+  useEffect(() => {
+    // Faqat birinchi marta kirganda ko'rsatish uchun (sessionStorage)
+    const hasSeenSplash = sessionStorage.getItem('nuvitauz_splash_seen');
+    if (hasSeenSplash) {
+      setShowSplash(false);
+    } else {
+      sessionStorage.setItem('nuvitauz_splash_seen', 'true');
+    }
+  }, []);
+
   return (
     <>
-      <Suspense fallback={<div className="text-center py-20">Yuklanmoqda...</div>}>
-        <ProductList />
-      </Suspense>
-      <section id="contact">
-        <ContactPage />
-      </section>
+      {showSplash && <IntroScreen onComplete={() => setShowSplash(false)} />}
+      <div className={showSplash ? 'opacity-0' : 'opacity-100 transition-opacity duration-1000'}>
+        <Suspense fallback={<div className="text-center py-20">Yuklanmoqda...</div>}>
+          <ProductList />
+        </Suspense>
+        <section id="contact">
+          <ContactPage />
+        </section>
+      </div>
     </>
-  )
+  );
 }
 
