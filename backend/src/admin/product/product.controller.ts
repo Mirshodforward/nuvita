@@ -7,22 +7,32 @@ import {
   Param,
   Delete,
   UseInterceptors,
-  UploadedFile,
+  UploadedFiles,
 } from '@nestjs/common';
 import { ProductService } from './product.service';
-import { FileInterceptor } from '@nestjs/platform-express';
+import { FilesInterceptor } from '@nestjs/platform-express';
 import { diskStorage } from 'multer';
-import { extname } from 'path';
+import { extname, join } from 'path';
+import { existsSync, mkdirSync } from 'fs';
 
 // Multer orqali rasmlarni saqlash konfiguratsiyasi
 const storage = diskStorage({
-  destination: './ProductPhoto',
+  destination: (req, file, cb) => {
+    // ProductPhoto/product_name/ papkasiga saqlash
+    const productName = req.body.name?.replace(/[^a-zA-Z0-9_\-]/g, '_') || 'unknown';
+    const uploadPath = join('./ProductPhoto', productName);
+    
+    // Papka mavjud bo'lmasa yaratish
+    if (!existsSync(uploadPath)) {
+      mkdirSync(uploadPath, { recursive: true });
+    }
+    cb(null, uploadPath);
+  },
   filename: (req, file, cb) => {
-    const randomName = Array(32)
-      .fill(null)
-      .map(() => Math.round(Math.random() * 16).toString(16))
-      .join('');
-    cb(null, `${randomName}${extname(file.originalname)}`);
+    // Unique nom yaratish (timestamp + random)
+    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+    const ext = extname(file.originalname);
+    cb(null, `${uniqueSuffix}${ext}`);
   },
 });
 
@@ -50,16 +60,24 @@ export class ProductController {
   constructor(private readonly productService: ProductService) {}
 
   @Post()
-  @UseInterceptors(FileInterceptor('photo', { storage }))
-  create(@UploadedFile() file: Express.Multer.File, @Body() body: any) {
-    const photoUrl = file ? `/ProductPhoto/${file.filename}` : undefined;
+  @UseInterceptors(FilesInterceptor('photos', 5, { storage }))
+  create(@UploadedFiles() files: Express.Multer.File[], @Body() body: any) {
+    // Rasmlar yo'llarini massiv sifatida yaratish
+    const photos: string[] = [];
+    if (files && files.length > 0) {
+      const productName = body.name?.replace(/[^a-zA-Z0-9_\-]/g, '_') || 'unknown';
+      files.forEach((file, index) => {
+        photos.push(`/ProductPhoto/${productName}/${file.filename}`);
+      });
+    }
+    
     const { translationRu, translationEn } = parseTranslationData(body);
     
     return this.productService.create({
       ...body,
       price: Number(body.price),
       amount: Number(body.amount),
-      photoUrl,
+      photos,
       translationRu,
       translationEn,
     });
@@ -76,16 +94,44 @@ export class ProductController {
   }
 
   @Patch(':id')
-  @UseInterceptors(FileInterceptor('photo', { storage }))
-  update(
+  @UseInterceptors(FilesInterceptor('photos', 5, { storage }))
+  async update(
     @Param('id') id: string,
-    @UploadedFile() file: Express.Multer.File,
+    @UploadedFiles() files: Express.Multer.File[],
     @Body() body: any,
   ) {
     const data = { ...body };
-    if (file) {
-      data.photoUrl = `/ProductPhoto/${file.filename}`;
+    
+    // Mavjud rasmlarni olish
+    let photos: string[] = [];
+    
+    // Eski rasmlarni saqlash (existingPhotos)
+    if (body.existingPhotos) {
+      try {
+        const existing = JSON.parse(body.existingPhotos);
+        if (Array.isArray(existing)) {
+          photos = [...existing];
+        }
+      } catch (e) {
+        // JSON parse xatosi
+      }
     }
+    
+    // Yangi rasmlarni qo'shish
+    if (files && files.length > 0) {
+      const productName = body.name?.replace(/[^a-zA-Z0-9_\-]/g, '_') || 'unknown';
+      files.forEach(file => {
+        photos.push(`/ProductPhoto/${productName}/${file.filename}`);
+      });
+    }
+    
+    // Faqat rasmlar o'zgargan bo'lsa yangilash
+    if (photos.length > 0 || body.existingPhotos !== undefined) {
+      data.photos = photos;
+    }
+    
+    // existingPhotos ni data'dan olib tashlash
+    delete data.existingPhotos;
 
     // Only parse numbers if they are present as strings in form-data
     if (data.price !== undefined) data.price = Number(data.price);

@@ -15,7 +15,7 @@ interface TranslationData {
 }
 
 interface CreateProductData {
-  photoUrl?: string;
+  photos?: string[];
   category: string;
   name: string;
   ingredients?: string;
@@ -59,7 +59,7 @@ export class ProductService {
     return this.prisma.product.create({
       data: {
         productId: generatedProductId,
-        photoUrl: data.photoUrl,
+        photos: data.photos || [],
         category: data.category,
         name: data.name,
         ingredients: data.ingredients,

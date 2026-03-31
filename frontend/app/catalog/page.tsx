@@ -30,7 +30,7 @@ interface Product {
   name: string;
   ingredients: string;
   usage: string;
-  photoUrl: string;
+  photos: string[];
   price: number;
   categoryId: number;
   active: boolean;
@@ -57,9 +57,9 @@ function ProductCard({
   return (
     <div className="bg-white rounded-2xl overflow-hidden hover:shadow-xl transition-all duration-300 border border-gray-100 group flex flex-col h-full">
       <Link href={`/${encodeURIComponent(product.name)}`} className="relative h-40 sm:h-48 overflow-hidden bg-gray-50 block">
-        {product.photoUrl ? (
+        {product.photos && product.photos.length > 0 ? (
           <img 
-            src={`${API_BASE_URL}` + product.photoUrl} 
+            src={`${API_BASE_URL}` + product.photos[0]} 
             alt={product.name} 
             className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" 
           />

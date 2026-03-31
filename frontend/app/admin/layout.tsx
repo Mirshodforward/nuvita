@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { ReactNode, useState, useEffect } from "react";
-import { Menu, X, LayoutDashboard, ListTree, Package, ShoppingCart, Users, Settings } from "lucide-react";
+import { Menu, X, LayoutDashboard, ListTree, Package, ShoppingCart, Users, Settings, UserCircle, BarChart3 } from "lucide-react";
 import { usePathname } from "next/navigation";
 import StatusIndicator from "./components/StatusIndicator";
 
@@ -28,10 +28,11 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
   }, [isOpen]);
 
   const navItems = [
-    { href: "/admin", label: "Asosiy", icon: LayoutDashboard },
+    { href: "/admin", label: "Analitika", icon: BarChart3 },
     { href: "/admin/categories", label: "Kategoriyalar", icon: ListTree },      
     { href: "/admin/products", label: "Mahsulotlar", icon: Package },
     { href: "/admin/orders", label: "Buyurtmalar", icon: ShoppingCart },        
+    { href: "/admin/users", label: "Foydalanuvchilar", icon: UserCircle },
     { href: "/admin/staff", label: "Xodimlar", icon: Users },
     { href: "/admin/settings", label: "Sozlamalar", icon: Settings },
   ];

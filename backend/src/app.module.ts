@@ -13,6 +13,8 @@ import { OrderModule } from './order/order.module';
 import { StaffModule } from './admin/staff/staff.module';
 import { SettingsModule } from './admin/settings/settings.module';
 import { ScoreModule } from './score/score.module';
+import { AdminUserModule } from './admin/user/user.module';
+import { AnalyticsModule } from './admin/analytics/analytics.module';
 
 import { SettingsController } from './settings.controller';
 
@@ -32,6 +34,8 @@ import { SettingsController } from './settings.controller';
     StaffModule,
     SettingsModule,
     ScoreModule,
+    AdminUserModule,
+    AnalyticsModule,
   ],
   controllers: [AppController, SettingsController],
   providers: [AppService],

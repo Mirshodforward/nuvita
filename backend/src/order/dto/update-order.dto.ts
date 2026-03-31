@@ -1,5 +1,5 @@
 import { IsEnum, IsOptional, IsNumber } from 'class-validator';
-import { OrderStatus } from '@prisma/client';
+import { OrderStatus } from '../../../generated/prisma';
 
 export class UpdateOrderDto {
   @IsEnum(OrderStatus)

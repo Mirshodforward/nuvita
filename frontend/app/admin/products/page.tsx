@@ -3,6 +3,7 @@
 import { useEffect, useState, useRef } from "react";
 import axios from "axios";
 import { API_BASE_URL } from "@/lib/api";
+import { X, Plus, Image as ImageIcon, Star } from "lucide-react";
 
 interface Category {
   id: number;
@@ -22,7 +23,7 @@ interface Product {
   id: number;
   productId: string;
   name: string;
-  photoUrl: string | null;
+  photos: string[];
   category: string;
   ingredients: string | null;
   uses: string | null;
@@ -49,7 +50,8 @@ export default function ProductsPage() {
   const [ingredients, setIngredients] = useState("");
   const [uses, setUses] = useState("");
   const [description, setDescription] = useState("");
-  const [file, setFile] = useState<File | null>(null);
+  const [files, setFiles] = useState<File[]>([]);
+  const [existingPhotos, setExistingPhotos] = useState<string[]>([]);
   
   // Form states - RU
   const [nameRu, setNameRu] = useState("");
@@ -63,7 +65,7 @@ export default function ProductsPage() {
   const [usesEn, setUsesEn] = useState("");
   const [descriptionEn, setDescriptionEn] = useState("");
   
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const fileInputRefs = useRef<(HTMLInputElement | null)[]>([]);
 
   const fetchProducts = async () => {
     try {
@@ -103,6 +105,7 @@ export default function ProductsPage() {
       setIngredients(prod.ingredients || "");
       setUses(prod.uses || "");
       setDescription(prod.description || "");
+      setExistingPhotos(prod.photos || []);
       
       // RU translation
       const ruTrans = prod.translations?.find(t => t.lang === 'RU');
@@ -126,6 +129,7 @@ export default function ProductsPage() {
       setIngredients("");
       setUses("");
       setDescription("");
+      setExistingPhotos([]);
       // Reset RU
       setNameRu("");
       setIngredientsRu("");
@@ -137,22 +141,91 @@ export default function ProductsPage() {
       setUsesEn("");
       setDescriptionEn("");
     }
-    setFile(null);
-    if (fileInputRef.current) {
-      fileInputRef.current.value = "";
-    }
+    setFiles([]);
+    // Reset all file inputs
+    fileInputRefs.current.forEach(input => {
+      if (input) input.value = "";
+    });
     setShowModal(true);
   };
 
   const closeForm = () => {
     setShowModal(false);
-    setFile(null);
+    setFiles([]);
+    setExistingPhotos([]);
+  };
+
+  // Belgilangan slotga rasm qo'shish
+  const handleFileAddToSlot = (e: React.ChangeEvent<HTMLInputElement>, slotIndex: number) => {
+    const newFile = e.target.files?.[0];
+    if (!newFile) return;
+
+    // Kombinatsiyalangan rasmlar ro'yxatini yaratish
+    const allPhotos = [...existingPhotos.map(p => ({ type: 'existing' as const, value: p })), 
+                       ...files.map(f => ({ type: 'new' as const, value: f }))];
+    
+    if (slotIndex < allPhotos.length) {
+      // Mavjud slotni almashtirish
+      if (slotIndex < existingPhotos.length) {
+        // Existing photo'ni o'chirish va file qo'shish
+        const newExisting = [...existingPhotos];
+        newExisting.splice(slotIndex, 1);
+        setExistingPhotos(newExisting);
+        
+        // Yangi faylni to'g'ri pozitsiyaga qo'shish
+        const insertIndex = slotIndex;
+        setFiles(prev => {
+          const newFiles = [...prev];
+          newFiles.splice(insertIndex, 0, newFile);
+          return newFiles;
+        });
+      } else {
+        // File'ni almashtirish
+        const fileIndex = slotIndex - existingPhotos.length;
+        setFiles(prev => {
+          const newFiles = [...prev];
+          newFiles[fileIndex] = newFile;
+          return newFiles;
+        });
+      }
+    } else {
+      // Yangi slot - oxiriga qo'shish
+      setFiles(prev => [...prev, newFile]);
+    }
+
+    // Input'ni tozalash
+    if (fileInputRefs.current[slotIndex]) {
+      fileInputRefs.current[slotIndex]!.value = "";
+    }
+  };
+
+  const removePhotoAtIndex = (index: number) => {
+    if (index < existingPhotos.length) {
+      setExistingPhotos(prev => prev.filter((_, i) => i !== index));
+    } else {
+      const fileIndex = index - existingPhotos.length;
+      setFiles(prev => prev.filter((_, i) => i !== fileIndex));
+    }
+  };
+
+  // Rasmlarni birlashtirish (existing + new)
+  const getAllPhotos = () => {
+    const combined: { type: 'existing' | 'new'; value: string | File; index: number }[] = [];
+    existingPhotos.forEach((p, i) => combined.push({ type: 'existing', value: p, index: i }));
+    files.forEach((f, i) => combined.push({ type: 'new', value: f, index: existingPhotos.length + i }));
+    return combined;
   };
 
   const saveProduct = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!category) {
       alert("Kategoriya tanlanmagan!");
+      return;
+    }
+    
+    // Yangi mahsulot uchun kamida 1 ta rasm kerak
+    if (!editingId && files.length === 0) {
+      alert("Kamida 1 ta rasm yuklang!");
       return;
     }
     
@@ -178,9 +251,15 @@ export default function ProductsPage() {
       if (usesEn) formData.append("usesEn", usesEn);
       if (descriptionEn) formData.append("descriptionEn", descriptionEn);
       
-      if (file) {
-        formData.append("photo", file);
+      // Mavjud rasmlarni yuborish (tahrirlashda saqlanishi kerak bo'lganlar)
+      if (existingPhotos.length > 0) {
+        formData.append("existingPhotos", JSON.stringify(existingPhotos));
       }
+      
+      // Yangi rasmlarni yuklash
+      files.forEach((file) => {
+        formData.append("photos", file);
+      });
 
       if (editingId) {
         await axios.patch(`${API_BASE_URL}/admin/product/${editingId}`, formData, {
@@ -255,8 +334,15 @@ export default function ProductsPage() {
              products.map((prod) => (
               <tr key={prod.id}>
                 <td className="px-6 py-4 whitespace-nowrap">
-                   {prod.photoUrl ? (
-                     <img src={`${API_BASE_URL}${prod.photoUrl}`} alt={prod.name} className="h-12 w-12 rounded-md object-cover border" />
+                   {prod.photos && prod.photos.length > 0 ? (
+                     <div className="relative">
+                       <img src={`${API_BASE_URL}${prod.photos[0]}`} alt={prod.name} className="h-12 w-12 rounded-md object-cover border" />
+                       {prod.photos.length > 1 && (
+                         <span className="absolute -top-1 -right-1 bg-green-500 text-white text-xs w-5 h-5 rounded-full flex items-center justify-center">
+                           {prod.photos.length}
+                         </span>
+                       )}
+                     </div>
                    ) : (
                      <div className="h-12 w-12 rounded-md bg-gray-200 flex items-center justify-center text-gray-400 text-xs">Yo'q</div>
                    )}
@@ -307,14 +393,118 @@ export default function ProductsPage() {
             <form onSubmit={saveProduct} className="grid grid-cols-1 md:grid-cols-2 gap-4">
               
               <div className="md:col-span-2">
-                <label className="block text-sm font-medium text-gray-700">Rasm yuklash</label>
-                <input
-                  type="file"
-                  accept="image/*"
-                  ref={fileInputRef}
-                  onChange={(e) => setFile(e.target.files ? e.target.files[0] : null)}
-                  className="mt-1 block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-green-50 file:text-green-700 hover:file:bg-green-100"
-                />
+                <label className="block text-sm font-medium text-gray-700 mb-3">
+                  Mahsulot rasmlari (1-5 ta)
+                </label>
+                
+                {/* 5 ta rasm sloti */}
+                <div className="grid grid-cols-5 gap-3">
+                  {[0, 1, 2, 3, 4].map((slotIndex) => {
+                    const allPhotos = getAllPhotos();
+                    const photo = allPhotos[slotIndex];
+                    const isMain = slotIndex === 0;
+                    const hasPhoto = !!photo;
+                    
+                    return (
+                      <div key={slotIndex} className="relative">
+                        {/* Hidden file input */}
+                        <input
+                          type="file"
+                          accept="image/*"
+                          ref={el => { fileInputRefs.current[slotIndex] = el; }}
+                          onChange={(e) => handleFileAddToSlot(e, slotIndex)}
+                          className="hidden"
+                          id={`photo-slot-${slotIndex}`}
+                        />
+                        
+                        {hasPhoto ? (
+                          /* Rasm mavjud */
+                          <div className={`relative aspect-square rounded-xl overflow-hidden border-2 ${isMain ? 'border-green-500 ring-2 ring-green-200' : 'border-gray-200'} group`}>
+                            <img
+                              src={photo.type === 'existing' 
+                                ? `${API_BASE_URL}${photo.value}` 
+                                : URL.createObjectURL(photo.value as File)}
+                              alt={`Rasm ${slotIndex + 1}`}
+                              className="w-full h-full object-cover"
+                            />
+                            
+                            {/* Asosiy rasm belgisi */}
+                            {isMain && (
+                              <div className="absolute top-1 left-1 bg-green-500 text-white text-[10px] px-1.5 py-0.5 rounded-full flex items-center gap-0.5 shadow">
+                                <Star size={10} fill="white" />
+                                <span>Asosiy</span>
+                              </div>
+                            )}
+                            
+                            {/* Tartib raqami */}
+                            <div className="absolute bottom-1 left-1 bg-black/60 text-white text-xs w-5 h-5 rounded-full flex items-center justify-center">
+                              {slotIndex + 1}
+                            </div>
+                            
+                            {/* Hover overlay */}
+                            <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
+                              {/* Almashtirish */}
+                              <label
+                                htmlFor={`photo-slot-${slotIndex}`}
+                                className="w-8 h-8 bg-white rounded-full flex items-center justify-center cursor-pointer hover:bg-gray-100 transition-colors"
+                                title="Almashtirish"
+                              >
+                                <ImageIcon size={14} className="text-gray-700" />
+                              </label>
+                              {/* O'chirish */}
+                              <button
+                                type="button"
+                                onClick={() => removePhotoAtIndex(slotIndex)}
+                                className="w-8 h-8 bg-red-500 rounded-full flex items-center justify-center hover:bg-red-600 transition-colors"
+                                title="O'chirish"
+                              >
+                                <X size={14} className="text-white" />
+                              </button>
+                            </div>
+                            
+                            {/* Yangi rasm belgisi */}
+                            {photo.type === 'new' && (
+                              <div className="absolute top-1 right-1 bg-blue-500 text-white text-[9px] px-1 py-0.5 rounded">
+                                Yangi
+                              </div>
+                            )}
+                          </div>
+                        ) : (
+                          /* Bo'sh slot */
+                          <label
+                            htmlFor={`photo-slot-${slotIndex}`}
+                            className={`aspect-square rounded-xl border-2 border-dashed flex flex-col items-center justify-center cursor-pointer transition-all
+                              ${isMain 
+                                ? 'border-green-400 bg-green-50 hover:bg-green-100 hover:border-green-500' 
+                                : 'border-gray-300 bg-gray-50 hover:bg-gray-100 hover:border-gray-400'}`}
+                          >
+                            <Plus size={20} className={isMain ? 'text-green-500' : 'text-gray-400'} />
+                            <span className={`text-xs mt-1 font-medium ${isMain ? 'text-green-600' : 'text-gray-500'}`}>
+                              {isMain ? 'Asosiy' : `Rasm ${slotIndex + 1}`}
+                            </span>
+                          </label>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+
+                {/* Ma'lumot */}
+                <div className="flex items-center justify-between mt-3">
+                  <p className="text-xs text-gray-500 flex items-center gap-1.5">
+                    <Star size={12} className="text-green-500" />
+                    Birinchi rasm asosiy rasm sifatida hamma joyda ko'rsatiladi
+                  </p>
+                  <span className={`text-xs font-medium px-2 py-1 rounded-full ${
+                    getAllPhotos().length === 0 
+                      ? 'bg-red-100 text-red-600' 
+                      : getAllPhotos().length < 3 
+                        ? 'bg-yellow-100 text-yellow-700' 
+                        : 'bg-green-100 text-green-700'
+                  }`}>
+                    {getAllPhotos().length}/5 ta rasm
+                  </span>
+                </div>
               </div>
 
               {/* UZ (Default) */}

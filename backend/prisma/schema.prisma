@@ -61,7 +61,7 @@ model CategoryTranslation {
 model Product {
   id           Int                  @id @default(autoincrement())
   productId    String               @unique @map("product_id")
-  photoUrl     String?              @map("photo_url")
+  photos       String[]             @default([])
   category     String
   name         String               // Default UZ
   ingredients  String?              // Default UZ

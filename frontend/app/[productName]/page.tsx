@@ -34,7 +34,7 @@ interface Product {
   ingredients: string;
   uses: string;
   description: string;
-  photoUrl: string;
+  photos: string[];
   price: number;
   categoryId: number;
   active: boolean;
@@ -50,6 +50,7 @@ export default function ProductDetailsPage() {
   const [loading, setLoading] = useState(true);
   const [reviews, setReviews] = useState<ProductScore[]>([]);
   const [rating, setRating] = useState({ average: 0, count: 0 });
+  const [selectedPhotoIndex, setSelectedPhotoIndex] = useState(0);
   
   // Review form state
   const [reviewGrade, setReviewGrade] = useState(5);
@@ -233,18 +234,55 @@ export default function ProductDetailsPage() {
         <div className="bg-white rounded-3xl shadow-xl border border-gray-100 overflow-hidden">
           <div className="flex flex-col lg:flex-row">
             
-            {/* Image Section */}
-            <div className="lg:w-1/2 bg-gradient-to-br from-gray-50 to-gray-100 p-8 flex items-center justify-center relative min-h-[300px] lg:min-h-[500px]">
-              {product.photoUrl ? (
+            {/* Image Section with Gallery */}
+            <div className="lg:w-1/2 bg-gradient-to-br from-gray-50 to-gray-100 p-8 flex flex-col items-center justify-center relative min-h-[300px] lg:min-h-[500px]">
+              {/* Thumbnails - Left side */}
+              {product.photos && product.photos.length > 1 && (
+                <div className="absolute left-4 top-1/2 -translate-y-1/2 flex flex-col gap-2 z-10">
+                  {product.photos.map((photo, index) => (
+                    <button
+                      key={index}
+                      onClick={() => setSelectedPhotoIndex(index)}
+                      className={`w-14 h-14 rounded-lg overflow-hidden border-2 transition-all hover:scale-105 ${
+                        selectedPhotoIndex === index 
+                          ? 'border-green-500 shadow-lg' 
+                          : 'border-gray-200 hover:border-gray-300'
+                      }`}
+                    >
+                      <img 
+                        src={`${API_BASE_URL}${photo}`} 
+                        alt={`${product.name} ${index + 1}`}
+                        className="w-full h-full object-cover"
+                      />
+                    </button>
+                  ))}
+                </div>
+              )}
+
+              {/* Main Image */}
+              {product.photos && product.photos.length > 0 ? (
                 <img 
-                  src={`${API_BASE_URL}${product.photoUrl}`} 
+                  src={`${API_BASE_URL}${product.photos[selectedPhotoIndex]}`} 
                   alt={product.name} 
-                  className="w-full max-w-md h-auto object-contain drop-shadow-2xl rounded-2xl hover:scale-105 transition-transform duration-500" 
+                  className="w-full max-w-md h-auto object-contain drop-shadow-2xl rounded-2xl hover:scale-105 transition-transform duration-500 cursor-pointer" 
+                  onClick={() => {
+                    // Keyingi rasmga o'tish
+                    if (product.photos.length > 1) {
+                      setSelectedPhotoIndex((prev) => (prev + 1) % product.photos.length);
+                    }
+                  }}
                 />
               ) : (
                 <div className="text-gray-400 font-medium flex flex-col items-center gap-4">
                   <div className="w-24 h-24 bg-gray-200 rounded-full flex items-center justify-center">?</div>
                   Rasm mavjud emas
+                </div>
+              )}
+              
+              {/* Photo counter */}
+              {product.photos && product.photos.length > 1 && (
+                <div className="absolute bottom-4 left-1/2 -translate-x-1/2 bg-black/50 text-white px-3 py-1 rounded-full text-sm">
+                  {selectedPhotoIndex + 1} / {product.photos.length}
                 </div>
               )}
               
