@@ -60,7 +60,10 @@ export class ProductController {
   constructor(private readonly productService: ProductService) {}
 
   @Post()
-  @UseInterceptors(FilesInterceptor('photos', 5, { storage }))
+  @UseInterceptors(FilesInterceptor('photos', 5, { 
+    storage,
+    limits: { fileSize: 10 * 1024 * 1024 } // 10MB per file
+  }))
   create(@UploadedFiles() files: Express.Multer.File[], @Body() body: any) {
     // Rasmlar yo'llarini massiv sifatida yaratish
     const photos: string[] = [];
@@ -94,7 +97,10 @@ export class ProductController {
   }
 
   @Patch(':id')
-  @UseInterceptors(FilesInterceptor('photos', 5, { storage }))
+  @UseInterceptors(FilesInterceptor('photos', 5, { 
+    storage,
+    limits: { fileSize: 10 * 1024 * 1024 } // 10MB per file
+  }))
   async update(
     @Param('id') id: string,
     @UploadedFiles() files: Express.Multer.File[],
