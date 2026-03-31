@@ -40,7 +40,8 @@ export class OrderService {
       name: item.product.name,
       price: item.product.price,
       count: item.productCount,
-      photoUrl: item.product.photoUrl
+      photoUrl: item.product.photos?.[0] || null,
+      photos: item.product.photos || []
     }));
 
     const orderCount = user.cart.count;
