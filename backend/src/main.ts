@@ -34,6 +34,10 @@ async function bootstrap() {
     prefix: '/api/ProductPhoto/',
   });
 
+  app.useStaticAssets(join(__dirname, '..', 'BannerPhoto'), {
+    prefix: '/api/BannerPhoto/',
+  });
+
   app.enableCors({
     origin: getAllowedOrigins(),
     credentials: true,
