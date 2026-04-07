@@ -15,6 +15,7 @@ import { SettingsModule } from './admin/settings/settings.module';
 import { ScoreModule } from './score/score.module';
 import { AdminUserModule } from './admin/user/user.module';
 import { AnalyticsModule } from './admin/analytics/analytics.module';
+import { BannerModule } from './admin/banner/banner.module';
 
 import { SettingsController } from './settings.controller';
 
@@ -36,6 +37,7 @@ import { SettingsController } from './settings.controller';
     ScoreModule,
     AdminUserModule,
     AnalyticsModule,
+    BannerModule,
   ],
   controllers: [AppController, SettingsController],
   providers: [AppService],

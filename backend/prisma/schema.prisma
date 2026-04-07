@@ -195,3 +195,16 @@ model Settings {
 
   @@map("settings")
 }
+
+model Banner {
+  id        Int      @id @default(autoincrement())
+  image     String   // Banner rasm yo'li
+  title     String?  // Ixtiyoriy sarlavha
+  link      String?  // Ixtiyoriy havola
+  order     Int      @default(0) // Ko'rsatish tartibi
+  isActive  Boolean  @default(true) @map("is_active")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("banners")
+}
