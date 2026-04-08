@@ -16,6 +16,7 @@ import { ScoreModule } from './score/score.module';
 import { AdminUserModule } from './admin/user/user.module';
 import { AnalyticsModule } from './admin/analytics/analytics.module';
 import { BannerModule } from './admin/banner/banner.module';
+import { SavedModule } from './saved/saved.module';
 
 import { SettingsController } from './settings.controller';
 
@@ -38,6 +39,7 @@ import { SettingsController } from './settings.controller';
     AdminUserModule,
     AnalyticsModule,
     BannerModule,
+    SavedModule,
   ],
   controllers: [AppController, SettingsController],
   providers: [AppService],

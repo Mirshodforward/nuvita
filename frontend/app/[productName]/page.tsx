@@ -14,7 +14,8 @@ import {
   Send,
   User,
   MessageSquare,
-  Loader2
+  Loader2,
+  Heart
 } from "lucide-react";
 
 interface ProductScore {
@@ -58,11 +59,50 @@ export default function ProductDetailsPage() {
   const [submitting, setSubmitting] = useState(false);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [hoverRating, setHoverRating] = useState(0);
+  const [isSaved, setIsSaved] = useState(false);
+  const [savingState, setSavingState] = useState(false);
 
   useEffect(() => {
     const token = localStorage.getItem("accessToken");
     setIsLoggedIn(!!token);
   }, []);
+
+  const checkSavedStatus = async (productId: string) => {
+    const token = localStorage.getItem("accessToken");
+    if (!token) return;
+    try {
+      const res = await axios.get(`${API_BASE_URL}/saved/check/${productId}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setIsSaved(res.data.saved);
+    } catch (err) {
+      console.error("Check saved error", err);
+    }
+  };
+
+  const toggleSave = async () => {
+    const token = localStorage.getItem("accessToken");
+    if (!token) {
+      alert("Iltimos, avval tizimga kiring!");
+      router.push("/login");
+      return;
+    }
+    if (!product) return;
+    
+    setSavingState(true);
+    try {
+      const res = await axios.post(
+        `${API_BASE_URL}/saved/toggle/${product.productId}`,
+        {},
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      setIsSaved(res.data.saved);
+    } catch (err) {
+      console.error("Toggle save error", err);
+    } finally {
+      setSavingState(false);
+    }
+  };
 
   const fetchProductAndReviews = async () => {
     try {
@@ -81,6 +121,9 @@ export default function ProductDetailsPage() {
         
         setReviews(reviewsRes.data);
         setRating(ratingRes.data);
+        
+        // Check if saved
+        checkSavedStatus(found.productId);
       } else {
         setProduct(null);
       }
@@ -340,13 +383,30 @@ export default function ProductDetailsPage() {
               </div>
 
               <div className="mt-10 pt-8 border-t border-gray-100">
-                <button
-                  onClick={() => addToCart(product.productId)}
-                  className="w-full bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white font-bold py-4 rounded-2xl shadow-lg shadow-green-200 transition duration-300 flex items-center justify-center gap-3 text-lg hover:-translate-y-1"
-                >
-                  <ShoppingCart size={24} />
-                  Savatga qo'shish
-                </button>
+                <div className="flex gap-3">
+                  <button
+                    onClick={() => addToCart(product.productId)}
+                    className="flex-1 bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white font-bold py-4 rounded-2xl shadow-lg shadow-green-200 transition duration-300 flex items-center justify-center gap-3 text-lg hover:-translate-y-1"
+                  >
+                    <ShoppingCart size={24} />
+                    Savatga qo'shish
+                  </button>
+                  <button
+                    onClick={toggleSave}
+                    disabled={savingState}
+                    className={`p-4 rounded-2xl border-2 transition-all duration-300 hover:-translate-y-1 ${
+                      isSaved 
+                        ? 'bg-red-50 border-red-200 text-red-500' 
+                        : 'bg-gray-50 border-gray-200 text-gray-400 hover:border-red-200 hover:text-red-400'
+                    }`}
+                  >
+                    {savingState ? (
+                      <div className="w-6 h-6 border-2 border-current border-t-transparent rounded-full animate-spin" />
+                    ) : (
+                      <Heart size={24} className={isSaved ? 'fill-red-500' : ''} />
+                    )}
+                  </button>
+                </div>
               </div>
 
             </div>

@@ -5,7 +5,7 @@ import { useEffect, useState, useRef } from 'react';
 import axios from 'axios';
 import { API_BASE_URL } from "@/lib/api";
 import { useRouter, usePathname } from 'next/navigation';
-import { ShoppingCart, Search, X, Menu, User } from 'lucide-react';
+import { ShoppingCart, Search, X, Menu, User, Heart } from 'lucide-react';
 import { isTelegramMiniApp, getTelegramInitData, getTelegramWebApp } from '@/lib/telegram';
 
 interface UserProfile {
@@ -41,6 +41,7 @@ export function Header() {
   const [token, setToken] = useState<string | null>(null);
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [cartCount, setCartCount] = useState<number>(0);
+  const [savedCount, setSavedCount] = useState<number>(0);
   const [isTg, setIsTg] = useState(false);
   
   const [searchQuery, setSearchQuery] = useState("");
@@ -125,6 +126,25 @@ export function Header() {
     }
   };
 
+  const fetchSavedCount = async (t: string) => {
+    try {
+      const res = await axios.get(`${API_BASE_URL}/saved/count`, {
+        headers: { Authorization: `Bearer ${t}` }
+      });
+      setSavedCount(res.data.count || 0);
+    } catch (err) {
+      if (axios.isAxiosError(err) && err.response?.status === 401) {
+        const newToken = await refreshAccessToken();
+        if (newToken) {
+          setToken(newToken);
+          fetchSavedCount(newToken);
+        }
+      } else {
+        console.error("Saved count fetch error", err);
+      }
+    }
+  };
+
   // Main initialization
   useEffect(() => {
     const inTg = isTelegramMiniApp();
@@ -138,6 +158,7 @@ export function Header() {
         setToken(t);
         fetchProfile(t);
         fetchCart(t);
+        fetchSavedCount(t);
       }
     }
 
@@ -145,16 +166,18 @@ export function Header() {
       const currentToken = localStorage.getItem("accessToken");
       if (currentToken) {
         fetchCart(currentToken);
+        fetchSavedCount(currentToken);
       }
     }, 3000);
 
     return () => clearInterval(interval);
   }, []);
 
-  // Fetch cart after TG auth
+  // Fetch cart and saved after TG auth
   useEffect(() => {
     if (token && isTg) {
       fetchCart(token);
+      fetchSavedCount(token);
     }
   }, [token, isTg]);
 
@@ -232,9 +255,9 @@ export function Header() {
                 Katalog
               </Link>
              
-              <a href="#contact" className="hover:text-green-600 transition-colors cursor-pointer">
+              <Link href="/contact" className="hover:text-green-600 transition-colors cursor-pointer">
                 Kontaktlar
-              </a>
+              </Link>
             </nav>
           </div>
           
@@ -266,6 +289,17 @@ export function Header() {
                 <Search size={20} />
               </button>
             </div>
+
+            {token && (
+              <Link href="/selected" className="relative p-2 text-gray-600 hover:text-red-500 transition-colors flex items-center gap-1 bg-gray-50 rounded-xl">
+                <Heart size={22} />
+                {savedCount > 0 && (
+                  <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] font-bold w-5 h-5 flex items-center justify-center rounded-full border-2 border-white">
+                    {savedCount}
+                  </span>
+                )}
+              </Link>
+            )}
 
             <Link href="/cart" className="relative p-2 text-gray-600 hover:text-green-600 transition-colors flex items-center gap-1 bg-gray-50 rounded-xl ml-1">     
               <ShoppingCart size={22} />
@@ -328,7 +362,7 @@ export function Header() {
         </div>
 
         {/* Mobile Menu - Expandable */}
-        <div className={`md:hidden overflow-hidden transition-all duration-300 ease-in-out ${isMenuOpen ? 'max-h-60 pb-3 opacity-100' : 'max-h-0 pb-0 opacity-0'}`}>
+        <div className={`md:hidden overflow-hidden transition-all duration-300 ease-in-out ${isMenuOpen ? 'max-h-80 pb-3 opacity-100' : 'max-h-0 pb-0 opacity-0'}`}>
           <nav className="flex flex-col space-y-1 bg-gray-50 rounded-2xl p-2 border border-gray-100">
             <Link 
               href="/" 
@@ -344,9 +378,24 @@ export function Header() {
             >
               Katalog
             </Link>
+            {token && (
+              <Link 
+                href="/selected" 
+                onClick={() => setIsMenuOpen(false)}
+                className="px-4 py-3 rounded-xl hover:bg-white hover:shadow-sm text-gray-700 font-medium transition-all flex items-center gap-2"
+              >
+                <Heart size={18} className="text-red-500" />
+                Saqlanganlar
+                {savedCount > 0 && (
+                  <span className="bg-red-100 text-red-600 text-xs font-bold px-2 py-0.5 rounded-full">
+                    {savedCount}
+                  </span>
+                )}
+              </Link>
+            )}
             
             <Link 
-              href="#contact" 
+              href="/contact" 
               onClick={() => setIsMenuOpen(false)}
               className="px-4 py-3 rounded-xl hover:bg-white hover:shadow-sm text-gray-700 font-medium transition-all"
             >

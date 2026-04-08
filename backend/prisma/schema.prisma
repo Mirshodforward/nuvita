@@ -9,24 +9,25 @@ datasource db {
 }
 
 model User {
-  id              Int       @id @default(autoincrement())
-  number          String    @unique
+  id              Int            @id @default(autoincrement())
+  number          String         @unique
   password        String?
-  userId          String?   @unique @map("user_id")
+  userId          String?        @unique @map("user_id")
   username        String?
-  fullName        String?   @map("full_name")
-  email           String?   @unique
+  fullName        String?        @map("full_name")
+  email           String?        @unique
   address         String?
-  dateOfBirth     DateTime? @map("date_of_birth")
+  dateOfBirth     DateTime?      @map("date_of_birth")
   gender          String?
-  refreshToken    String?   @map("refresh_token")
-  profileComplete Boolean   @default(false) @map("profile_complete")
-  lang            Lang      @default(UZ)
-  role            Role      @default(USER)
-  createdAt       DateTime  @default(now()) @map("created_at")
-  updatedAt       DateTime  @updatedAt @map("updated_at")
+  refreshToken    String?        @map("refresh_token")
+  profileComplete Boolean        @default(false) @map("profile_complete")
+  lang            Lang           @default(UZ)
+  role            Role           @default(USER)
+  createdAt       DateTime       @default(now()) @map("created_at")
+  updatedAt       DateTime       @updatedAt @map("updated_at")
   cart            Cart?
   orders          Order[]
+  savedProducts   SavedProduct[]
 
   @@map("users")
 }
@@ -76,6 +77,7 @@ model Product {
   categoryRel  Category             @relation(fields: [category], references: [name])
   translations ProductTranslation[]
   scores       ProductScore[]
+  savedBy      SavedProduct[]
 
   @@map("products")
 }
@@ -207,4 +209,16 @@ model Banner {
   updatedAt DateTime @updatedAt @map("updated_at")
 
   @@map("banners")
+}
+
+model SavedProduct {
+  id        Int      @id @default(autoincrement())
+  number    String   // User phone number
+  productId String   @map("product_id")
+  createdAt DateTime @default(now()) @map("created_at")
+  user      User     @relation(fields: [number], references: [number], onDelete: Cascade)
+  product   Product  @relation(fields: [productId], references: [productId], onDelete: Cascade)
+
+  @@unique([number, productId])
+  @@map("saved_products")
 }
