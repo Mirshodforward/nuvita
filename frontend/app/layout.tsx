@@ -4,6 +4,7 @@ import "./globals.css";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import FloatingCart from '@/components/FloatingCart';
+import NuvitaChat from '@/components/NuvitaChat';
 
 
 
@@ -49,6 +50,7 @@ export default function RootLayout({
         </main>
         
         <FloatingCart />
+        <NuvitaChat />
         <Footer />
       </body>
     </html>

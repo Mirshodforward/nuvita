@@ -59,6 +59,7 @@ export class OrderService {
           fullName: createOrderDto.fullName,
           contactNumber: createOrderDto.contactNumber,
           address: createOrderDto.address,
+          comment: createOrderDto.comment || null,
           productItems: productItemsJson,
           count: orderCount,
           summ: orderSumm,

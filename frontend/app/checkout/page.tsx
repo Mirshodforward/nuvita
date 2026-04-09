@@ -33,6 +33,7 @@ export default function CheckoutPage() {
     district: "",
     address: "",
     paymentType: "PAYME",
+    comment: "",
   });
   
   const [submitting, setSubmitting] = useState(false);
@@ -100,6 +101,7 @@ export default function CheckoutPage() {
         address: `${formData.region}, ${formData.district}, ${formData.address}`,
         contactNumber: formData.contactNumber,
         paymentType: formData.paymentType,
+        comment: formData.comment || undefined,
       }, {
         headers: { Authorization: "Bearer " + token }
       });
@@ -211,6 +213,17 @@ export default function CheckoutPage() {
                   <label className="block text-sm font-medium text-gray-700 mb-2">To`liq manzil (Ko`cha, uy)</label>
                   <input required type="text" name="address" value={formData.address} onChange={handleChange} placeholder="Mashrab ko`chasi, 12-uy"
                     className="w-full bg-gray-50 border border-transparent focus:border-gray-300 focus:bg-white focus:ring-0 rounded-xl px-4 py-3.5 outline-none transition" />
+                </div>
+                <div className="mt-5">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Izoh (ixtiyoriy)</label>
+                  <textarea
+                    name="comment"
+                    value={formData.comment}
+                    onChange={(e) => setFormData({ ...formData, comment: e.target.value })}
+                    placeholder="Kuryer yoki admin uchun qo`shimcha izoh..."
+                    rows={3}
+                    className="w-full bg-gray-50 border border-transparent focus:border-gray-300 focus:bg-white focus:ring-0 rounded-xl px-4 py-3.5 outline-none transition resize-none"
+                  />
                 </div>
               </section>
 

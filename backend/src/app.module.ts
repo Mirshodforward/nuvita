@@ -17,6 +17,7 @@ import { AdminUserModule } from './admin/user/user.module';
 import { AnalyticsModule } from './admin/analytics/analytics.module';
 import { BannerModule } from './admin/banner/banner.module';
 import { SavedModule } from './saved/saved.module';
+import { ChatModule } from './chat/chat.module';
 
 import { SettingsController } from './settings.controller';
 
@@ -40,6 +41,7 @@ import { SettingsController } from './settings.controller';
     AnalyticsModule,
     BannerModule,
     SavedModule,
+    ChatModule,
   ],
   controllers: [AppController, SettingsController],
   providers: [AppService],

@@ -1,4 +1,4 @@
-import { IsString, IsNotEmpty, IsEnum } from 'class-validator';
+import { IsString, IsNotEmpty, IsEnum, IsOptional } from 'class-validator';
 import { PaymentType } from '../../../generated/prisma';
 
 export class CreateOrderDto {
@@ -17,4 +17,8 @@ export class CreateOrderDto {
   @IsEnum(PaymentType)
   @IsNotEmpty()
   paymentType: PaymentType;
+
+  @IsString()
+  @IsOptional()
+  comment?: string; // Mijoz izohi (ixtiyoriy)
 }

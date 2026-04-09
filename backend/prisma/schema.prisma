@@ -144,8 +144,7 @@ model Order {
   count         Int
   summ          Float
   address       String
-  latitude      Float?
-  longitude     Float?
+  comment       String?       // Mijoz izohi (ixtiyoriy)
   courierUserId Int?          @map("courier_user_id")
   deliverySumm  Float         @default(0) @map("delivery_summ")
   paymentType   PaymentType   @map("payment_type")
@@ -196,6 +195,36 @@ model Settings {
   updatedAt    DateTime @updatedAt @map("updated_at")
 
   @@map("settings")
+}
+
+// Nuvita AI Chat System
+model ChatSession {
+  id        Int           @id @default(autoincrement())
+  sessionId String        @unique @default(uuid()) @map("session_id")
+  userId    Int?          @map("user_id")
+  number    String?       // Guest user phone or identifier
+  isActive  Boolean       @default(true) @map("is_active")
+  createdAt DateTime      @default(now()) @map("created_at")
+  updatedAt DateTime      @updatedAt @map("updated_at")
+  messages  ChatMessage[]
+
+  @@map("chat_sessions")
+}
+
+model ChatMessage {
+  id        Int         @id @default(autoincrement())
+  sessionId Int         @map("session_id")
+  role      MessageRole // USER or ASSISTANT
+  content   String
+  createdAt DateTime    @default(now()) @map("created_at")
+  session   ChatSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@map("chat_messages")
+}
+
+enum MessageRole {
+  USER
+  ASSISTANT
 }
 
 model Banner {
