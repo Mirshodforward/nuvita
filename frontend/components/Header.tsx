@@ -5,7 +5,7 @@ import { useEffect, useState, useRef } from 'react';
 import axios from 'axios';
 import { API_BASE_URL } from "@/lib/api";
 import { useRouter, usePathname } from 'next/navigation';
-import { ShoppingCart, Search, X, Menu, User, Heart } from 'lucide-react';
+import { ShoppingCart, Search, X, Menu, User, Heart, ChevronDown, FileText, LogOut } from 'lucide-react';
 import { isTelegramMiniApp, getTelegramInitData, getTelegramWebApp } from '@/lib/telegram';
 
 interface UserProfile {
@@ -47,7 +47,9 @@ export function Header() {
   const [searchQuery, setSearchQuery] = useState("");
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [isProfileDropdownOpen, setIsProfileDropdownOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
+  const profileDropdownRef = useRef<HTMLDivElement>(null);
   
   const searchInputRef = useRef<HTMLInputElement>(null);
   
@@ -202,6 +204,28 @@ export function Header() {
     }
   }, [isSearchOpen]);
 
+  // Click outside to close profile dropdown
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (profileDropdownRef.current && !profileDropdownRef.current.contains(event.target as Node)) {
+        setIsProfileDropdownOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, []);
+
+  const handleLogout = () => {
+    localStorage.removeItem("accessToken");
+    localStorage.removeItem("refreshToken");
+    setToken(null);
+    setProfile(null);
+    setIsProfileDropdownOpen(false);
+    router.push("/");
+  };
+
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
     if (searchQuery.trim()) {
@@ -228,6 +252,7 @@ export function Header() {
   }
 
   const displayName = profile?.fullName || profile?.number || "Profil";
+  const userInitial = profile?.fullName ? profile.fullName.charAt(0).toUpperCase() : profile?.number?.charAt(0) || "M";
 
   return (
     <header className={`bg-white/95 backdrop-blur-md shadow-sm border-b sticky top-0 z-50 transition-all duration-300 ${isScrolled ? 'shadow-md' : ''}`}>
@@ -253,6 +278,9 @@ export function Header() {
               </Link>
               <Link href="/catalog" className="hover:text-green-600 transition-colors">
                 Katalog
+              </Link>
+              <Link href="/blog" className="hover:text-green-600 transition-colors">
+                Blog
               </Link>
              
               <Link href="/contact" className="hover:text-green-600 transition-colors cursor-pointer">
@@ -311,22 +339,76 @@ export function Header() {
             </Link>
 
             {token ? (
-              <button
-                onClick={() => router.push('/profile')}
-                className="flex items-center justify-center w-10 h-10 bg-gray-100 hover:bg-gray-200 rounded-full transition-colors"
-              >
-                {profile?.photoUrl ? (
-                  <img 
-                    src={profile.photoUrl} 
-                    alt="Profile" 
-                    className="w-full h-full rounded-full object-cover"
-                  />
-                ) : (
-                  <User size={20} className="text-gray-600" />
+              <div className="relative ml-2" ref={profileDropdownRef}>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => setIsProfileDropdownOpen(!isProfileDropdownOpen)}
+                    className="flex items-center gap-1 bg-gray-50 hover:bg-gray-100 px-2 py-1.5 rounded-xl transition-colors shrink-0"
+                  >
+                    <div className="w-8 h-8 md:w-9 md:h-9 bg-green-100 text-green-600 rounded-full flex items-center justify-center font-semibold text-sm md:text-base ring-2 ring-white">
+                      {profile?.photoUrl ? (
+                        <img 
+                          src={profile.photoUrl} 
+                          alt="Profile" 
+                          className="w-full h-full rounded-full object-cover"
+                        />
+                      ) : userInitial}
+                    </div>
+                    <ChevronDown size={16} className={`text-gray-500 transition-transform duration-200 ${isProfileDropdownOpen ? 'rotate-180' : ''}`} />
+                  </button>
+                </div>
+
+                {/* Dropdown Menu */}
+                {isProfileDropdownOpen && (
+                  <div className="absolute right-0 top-full mt-3 w-56 bg-white rounded-2xl shadow-[0_10px_40px_-10px_rgba(0,0,0,0.1)] border border-gray-100 overflow-hidden transform origin-top-right transition-all animate-in fade-in slide-in-from-top-2">
+                    <div className="p-4 border-b border-gray-50 bg-gray-50/50">
+                      <p className="font-semibold text-gray-900 truncate">
+                        {displayName}
+                      </p>
+                    </div>
+                    <div className="p-2 space-y-1">
+                      <Link 
+                        href="/profile" 
+                        onClick={() => setIsProfileDropdownOpen(false)}
+                        className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-gray-600 hover:bg-gray-50 hover:text-gray-900 transition-colors"
+                      >
+                        <User size={18} />
+                        <span className="font-medium text-sm">Profil</span>
+                      </Link>
+                      
+                      <Link 
+                        href="/orders" 
+                        onClick={() => setIsProfileDropdownOpen(false)}
+                        className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-gray-600 hover:bg-gray-50 hover:text-gray-900 transition-colors"
+                      >
+                        <FileText size={18} />
+                        <span className="font-medium text-sm">Mening buyurtmalarim</span>
+                      </Link>
+
+                      <Link 
+                        href="/selected" 
+                        onClick={() => setIsProfileDropdownOpen(false)}
+                        className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-gray-600 hover:bg-gray-50 hover:text-gray-900 transition-colors"
+                      >
+                        <Heart size={18} />
+                        <span className="font-medium text-sm">Sevimlilar</span>
+                      </Link>
+                    </div>
+                    
+                    <div className="p-2 border-t border-gray-100">
+                      <button 
+                        onClick={handleLogout}
+                        className="flex w-full items-center gap-3 px-3 py-2.5 rounded-xl text-red-600 hover:bg-red-50 hover:text-red-700 transition-colors"
+                      >
+                        <LogOut size={18} />
+                        <span className="font-medium text-sm">Chiqish</span>
+                      </button>
+                    </div>
+                  </div>
                 )}
-              </button>
+              </div>
             ) : (
-              <Link href="/login" className="text-white bg-green-600 hover:bg-green-700 px-4 py-2 rounded-xl font-medium transition-colors text-sm">
+              <Link href="/login" className="text-white bg-green-600 hover:bg-green-700 px-4 py-2 rounded-xl font-medium transition-colors text-sm ml-2">
                 Kirish
               </Link>
             )}
@@ -377,6 +459,13 @@ export function Header() {
               className="px-4 py-3 rounded-xl hover:bg-white hover:shadow-sm text-gray-700 font-medium transition-all"
             >
               Katalog
+            </Link>
+            <Link 
+              href="/blog" 
+              onClick={() => setIsMenuOpen(false)}
+              className="px-4 py-3 rounded-xl hover:bg-white hover:shadow-sm text-gray-700 font-medium transition-all"
+            >
+              Blog
             </Link>
             {token && (
               <Link 

@@ -56,7 +56,8 @@ export default function LoginPage() {
       localStorage.setItem("accessToken", res.data.accessToken);
       localStorage.setItem("refreshToken", res.data.refreshToken);
 
-      router.push("/profile");
+      // Redirect to home and refresh to update app state (header, etc.)
+      window.location.href = "/";
     } catch (err: any) {
       if (err.response?.status === 401) {
         setError("Parol noto'g'ri kitirildi.");

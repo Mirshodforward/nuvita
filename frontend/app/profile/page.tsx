@@ -6,25 +6,17 @@ import { API_BASE_URL } from "@/lib/api";
 import { useRouter } from "next/navigation";
 import { 
   UserCircle, 
-  Settings, 
-  ShoppingBag, 
-  LogOut, 
-  ChevronRight, 
-  Package, 
   MapPin, 
   Calendar, 
   Phone,
   CheckCircle,
-  Clock,
-  XCircle,
-  Truck,
   Edit2,
   Save,
   X,
-  Globe,
   MessageCircle,
   ExternalLink,
-  Loader2
+  Loader2,
+  LogOut
 } from "lucide-react";
 import Link from "next/link";
 import { getTelegramUser, getTelegramWebApp, isTelegramMiniApp } from "@/lib/telegram";
@@ -43,29 +35,13 @@ interface UserProfile {
   profileComplete: boolean;
 }
 
-interface Order {
-  id: number;
-  orderId: string;
-  summ: number;
-  deliverySumm: number;
-  paymentType: string;
-  orderStatus: "NEW" | "ACCEPTED" | "ON_THE_WAY" | "DELIVERED" | "CANCELLED";
-  createdAt: string;
-  address: string;
-  productItems: any[];
-}
-
-type TabType = 'info' | 'settings';
-
 export default function ProfilePage() {
   const router = useRouter();
   
   const [token, setToken] = useState<string | null>(null);
   const [profile, setProfile] = useState<UserProfile | null>(null);
-  const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [tgPhotoUrl, setTgPhotoUrl] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<TabType>('info');
   const [isEditing, setIsEditing] = useState(false);
   const [formData, setFormData] = useState<Partial<UserProfile>>({});
   const [linkingTelegram, setLinkingTelegram] = useState(false);
@@ -124,13 +100,9 @@ export default function ProfilePage() {
   const fetchData = async (t: string) => {
     try {
       setLoading(true);
-      const [profileRes, ordersRes] = await Promise.all([
-        axios.get(`${API_BASE_URL}/user/me`, { headers: { Authorization: `Bearer ${t}` } }),
-        axios.get(`${API_BASE_URL}/order/me`, { headers: { Authorization: `Bearer ${t}` } })
-      ]);
+      const profileRes = await axios.get(`${API_BASE_URL}/user/me`, { headers: { Authorization: `Bearer ${t}` } });
       setProfile(profileRes.data);
       setFormData(profileRes.data);
-      setOrders(ordersRes.data);
     } catch (err: any) {
       console.error(err);
       if (err.response?.status === 401) {
@@ -154,17 +126,6 @@ export default function ProfilePage() {
       console.error(error);
       alert("Xatolik yuz berdi");
     }
-  };
-
-  const getStatusInfo = (status: string) => {
-    const statusMap: Record<string, { label: string; color: string; icon: React.ReactNode }> = {
-      NEW: { label: "Yangi", color: "bg-blue-100 text-blue-800", icon: <Clock size={16} /> },
-      ACCEPTED: { label: "Qabul qilingan", color: "bg-indigo-100 text-indigo-800", icon: <CheckCircle size={16} /> },
-      ON_THE_WAY: { label: "Yo'lda", color: "bg-yellow-100 text-yellow-800", icon: <Truck size={16} /> },
-      DELIVERED: { label: "Yetkazilgan", color: "bg-green-100 text-green-800", icon: <CheckCircle size={16} /> },
-      CANCELLED: { label: "Bekor qilingan", color: "bg-red-100 text-red-800", icon: <XCircle size={16} /> }
-    };
-    return statusMap[status] || { label: status, color: "bg-gray-100 text-gray-800", icon: <Package size={16} /> };
   };
 
   const handleLogout = () => {
@@ -207,337 +168,216 @@ export default function ProfilePage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-        <div className="flex flex-col md:flex-row gap-6">
-          {/* Sidebar */}
-          <div className="w-full md:w-1/3 lg:w-1/4">
-            <div className="bg-white border border-gray-100 rounded-2xl shadow-sm p-6 mb-4 text-center">
-              {tgPhotoUrl ? (
-                <img 
-                  src={tgPhotoUrl} 
-                  alt="Profile" 
-                  className="w-20 h-20 rounded-full object-cover mx-auto mb-3 border-4 border-green-500/20"
-                />
-              ) : (
-                <div className="w-20 h-20 bg-gradient-to-br from-green-400 to-green-600 rounded-full flex items-center justify-center mx-auto mb-3 text-white text-2xl font-bold shadow-lg">
-                  {profile?.fullName?.charAt(0).toUpperCase() || <UserCircle size={48} />}
-                </div>
-              )}
-              <h2 className="text-lg font-bold mb-0.5 text-gray-800">
-                {profile?.fullName || 'Ism kiritilmagan'}
-              </h2>
-              {profile?.username && (
-                <p className="text-green-600 font-medium text-sm mb-0.5">@{profile.username}</p>
-              )}
-              <p className="text-sm text-gray-500">
-                {profile?.number?.startsWith('tg_') ? 'Telegram orqali' : profile?.number}
-              </p>
+    <div className="min-h-screen bg-gray-50 pb-20">
+      <div className="max-w-2xl mx-auto px-4 sm:px-6 py-8 space-y-6">
+        
+        {/* Profile Card & Avatar */}
+        <div className="bg-white border border-gray-100 rounded-3xl shadow-[0_2px_10px_-3px_rgba(0,0,0,0.05)] p-6 sm:p-8 flex flex-col sm:flex-row items-center gap-6">
+          {tgPhotoUrl ? (
+            <div className="relative">
+              <img 
+                src={tgPhotoUrl} 
+                alt="Profile" 
+                className="w-24 h-24 sm:w-28 sm:h-28 rounded-full object-cover border-4 border-green-50 shadow-md"
+              />
+              <div className="absolute bottom-1 right-1 bg-green-500 w-5 h-5 rounded-full border-2 border-white"></div>
             </div>
+          ) : (
+            <div className="relative">
+              <div className="w-24 h-24 sm:w-28 sm:h-28 bg-gradient-to-br from-green-400 to-green-600 rounded-full flex items-center justify-center text-white text-3xl font-bold shadow-lg">
+                {profile?.fullName?.charAt(0).toUpperCase() || <UserCircle size={48} />}
+              </div>
+              <div className="absolute bottom-1 right-1 bg-gray-300 w-5 h-5 rounded-full border-2 border-white"></div>
+            </div>
+          )}
+          
+          <div className="text-center sm:text-left flex-1">
+            <h2 className="text-2xl font-bold text-gray-900 mb-1">
+              {profile?.fullName || 'Ism kiritilmagan'}
+            </h2>
+            <p className="text-gray-500 text-sm font-medium flex items-center justify-center sm:justify-start gap-1 pb-3">
+              <Phone size={14} />
+              {profile?.number?.startsWith('tg_') ? 'Telegram orqali' : profile?.number}
+            </p>
+          </div>
+        </div>
 
-            {/* Telegram Connection Block */}
-            {!isTelegramMiniApp() && (
-              <div className="bg-white border border-gray-100 rounded-2xl shadow-sm p-4 mb-4">
-                {profile?.userId ? (
-                  // Telegram is connected
-                  <div className="flex items-center gap-3">
-                    <div className="p-2.5 bg-blue-500 rounded-xl text-white">
-                      <MessageCircle size={20} />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-xs text-gray-500 mb-0.5">Telegram ulangan</p>
-                      <p className="font-semibold text-gray-800 truncate">
-                        {profile.username ? `@${profile.username}` : 'Ulangan'}
-                      </p>
-                    </div>
-                    <CheckCircle size={20} className="text-green-500 flex-shrink-0" />
+        {/* Telegram Connection Block */}
+        {!isTelegramMiniApp() && (
+          <div className="bg-white border border-gray-100 rounded-3xl shadow-[0_2px_10px_-3px_rgba(0,0,0,0.05)] p-5">
+            {profile?.userId ? (
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-4">
+                  <div className="w-12 h-12 bg-blue-50 rounded-2xl flex items-center justify-center text-blue-500 shrink-0">
+                    <MessageCircle size={24} className="fill-blue-100" />
                   </div>
-                ) : (
-                  // Telegram not connected
                   <div>
-                    <div className="flex items-center gap-3 mb-3">
-                      <div className="p-2.5 bg-gray-100 rounded-xl text-gray-400">
-                        <MessageCircle size={20} />
-                      </div>
-                      <div className="flex-1">
-                        <p className="text-sm font-semibold text-gray-800">Telegram ulanmagan</p>
-                        <p className="text-xs text-gray-500">Botdan xabarlarni olish uchun ulang</p>
-                      </div>
-                    </div>
-                    <button
-                      onClick={handleConnectTelegram}
-                      disabled={linkingTelegram}
-                      className="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white font-medium py-2.5 px-4 rounded-xl transition-all disabled:opacity-50"
-                    >
-                      {linkingTelegram ? (
-                        <>
-                          <Loader2 size={16} className="animate-spin" />
-                          Yuklanmoqda...
-                        </>
-                      ) : (
-                        <>
-                          <ExternalLink size={16} />
-                          Telegram ulash
-                        </>
-                      )}
-                    </button>
+                    <h3 className="font-semibold text-gray-900 text-sm sm:text-base">Telegram ulangan</h3>
+                    <p className="text-blue-600 font-medium text-xs sm:text-sm mt-0.5">
+                      {profile.username ? `@${profile.username}` : 'Muvaffaqiyatli'}
+                    </p>
                   </div>
-                )}
+                </div>
+                <div className="bg-green-50 text-green-600 p-2 rounded-full hidden sm:block">
+                  <CheckCircle size={20} />
+                </div>
+              </div>
+            ) : (
+              <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+                <div className="flex items-center gap-4 w-full sm:w-auto">
+                  <div className="w-12 h-12 bg-gray-50 rounded-2xl flex items-center justify-center text-gray-400 shrink-0">
+                    <MessageCircle size={24} />
+                  </div>
+                  <div className="flex-1">
+                    <h3 className="font-semibold text-gray-900 text-sm sm:text-base">Tizimga ulang</h3>
+                    <p className="text-gray-500 text-xs sm:text-sm mt-0.5 leading-tight">
+                      Botdan xabarlarni tezroq oling
+                    </p>
+                  </div>
+                </div>
+                <button
+                  onClick={handleConnectTelegram}
+                  disabled={linkingTelegram}
+                  className="w-full sm:w-auto flex items-center justify-center gap-2 bg-blue-500 hover:bg-blue-600 text-white font-medium py-2.5 px-5 rounded-xl transition-colors disabled:opacity-70"
+                >
+                  {linkingTelegram ? (
+                    <><Loader2 size={18} className="animate-spin" /> Kuting...</>
+                  ) : (
+                    <><ExternalLink size={18} /> Ulanish</>
+                  )}
+                </button>
               </div>
             )}
+          </div>
+        )}
 
-            <div className="bg-white border border-gray-100 rounded-2xl shadow-sm overflow-hidden">
+        {/* Personal Details Form */}
+        <div className="bg-white border border-gray-100 rounded-3xl shadow-[0_2px_10px_-3px_rgba(0,0,0,0.05)] overflow-hidden">
+          <div className="p-5 sm:p-6 border-b border-gray-50 flex items-center justify-between bg-gray-50/30">
+            <h3 className="text-[17px] font-bold text-gray-900 flex items-center gap-2">
+              <UserCircle size={20} className="text-green-600" />
+              Shaxsiy ma'lumotlar
+            </h3>
+            {!isEditing ? (
               <button 
-                onClick={() => setActiveTab('info')}
-                className={`w-full flex items-center justify-between p-3.5 transition-colors ${
-                  activeTab === 'info' 
-                    ? 'bg-green-500/10 text-green-600 border-l-4 border-green-600' 
-                    : 'text-gray-600 hover:bg-gray-50 border-l-4 border-transparent'
-                }`}
+                onClick={() => setIsEditing(true)} 
+                className="flex items-center gap-1.5 text-sm font-medium text-green-600 bg-green-50 hover:bg-green-100 py-1.5 px-3 rounded-lg transition-colors"
               >
-                <div className="flex items-center gap-3 font-medium text-sm">
-                  <UserCircle size={18} />
-                  Shaxsiy ma&apos;lumotlar
-                </div>
-                <ChevronRight size={16} className={activeTab === 'info' ? 'text-green-600' : 'opacity-40'} />
+                <Edit2 size={14} /> Tahrirlash
               </button>
-              <Link 
-                href="/orders"
-                className={`w-full flex items-center justify-between p-3.5 transition-colors text-gray-600 hover:bg-gray-50 border-l-4 border-transparent`}
-              >
-                <div className="flex items-center gap-3 font-medium text-sm">
-                  <ShoppingBag size={18} />
-                  Buyurtmalarim
-                </div>
-                <div className="flex items-center gap-2">
-                  {orders.length > 0 && (
-                    <span className="bg-green-100 text-green-700 text-xs py-0.5 px-2 rounded-full font-bold">{orders.length}</span>
-                  )}
-                  <ChevronRight size={16} className={'opacity-40'} />
-                </div>
-              </Link>
-              <button 
-                onClick={() => setActiveTab('settings')}
-                className={`w-full flex items-center justify-between p-3.5 transition-colors ${
-                  activeTab === 'settings' 
-                    ? 'bg-green-500/10 text-green-600 border-l-4 border-green-600' 
-                    : 'text-gray-600 hover:bg-gray-50 border-l-4 border-transparent'
-                }`}
-              >
-                <div className="flex items-center gap-3 font-medium text-sm">
-                  <Settings size={18} />
-                  Sozlamalar
-                </div>
-                <ChevronRight size={16} className={activeTab === 'settings' ? 'text-green-600' : 'opacity-40'} />
-              </button>
-              
-              <div className="h-px my-1 bg-gray-100"></div>
-              
-              <button 
-                onClick={handleLogout}
-                className="w-full flex items-center gap-3 p-3.5 text-red-500 font-medium hover:bg-red-50/50 transition-colors text-sm"
-              >
-                <LogOut size={18} />
-                Chiqish
-              </button>
-            </div>
+            ) : (
+              <div className="flex gap-2">
+                <button 
+                  onClick={() => setIsEditing(false)} 
+                  className="flex items-center justify-center text-gray-500 bg-gray-100 hover:bg-gray-200 p-1.5 w-8 h-8 rounded-lg transition-colors"
+                >
+                  <X size={16} />
+                </button>
+                <button 
+                  onClick={() => handleUpdate(formData)} 
+                  className="flex items-center gap-1.5 text-sm font-medium text-white bg-green-600 py-1.5 px-3 rounded-lg hover:bg-green-700 transition-colors shadow-sm"
+                >
+                  <Save size={14} /> Saqlash
+                </button>
+              </div>
+            )}
           </div>
 
-          {/* Content Area */}
-          <div className="w-full md:w-2/3 lg:w-3/4">
-            {/* TAB: INFO */}
-            {activeTab === 'info' && (
-              <div className="bg-white border border-gray-100 rounded-2xl shadow-sm p-5 sm:p-6">
-                <div className="flex justify-between items-center mb-5 pb-4 border-b border-gray-100">
-                  <h3 className="text-xl font-bold text-gray-800">Shaxsiy ma&apos;lumotlar</h3>
-                  {!isEditing ? (
-                    <button 
-                      onClick={() => setIsEditing(true)} 
-                      className="flex items-center gap-2 text-sm font-medium text-blue-600 bg-blue-500/10 py-2 px-3 rounded-lg hover:bg-blue-500/20 transition-colors"
-                    >
-                      <Edit2 size={14} /> Tahrirlash
-                    </button>
-                  ) : (
-                    <div className="flex gap-2">
-                      <button 
-                        onClick={() => setIsEditing(false)} 
-                        className="flex items-center gap-1.5 text-sm font-medium text-gray-600 bg-gray-100 py-2 px-3 rounded-lg hover:bg-gray-200 transition-colors"
-                      >
-                        <X size={14} /> Bekor
-                      </button>
-                      <button 
-                        onClick={() => handleUpdate(formData)} 
-                        className="flex items-center gap-1.5 text-sm font-medium text-white bg-green-600 py-2 px-3 rounded-lg hover:bg-green-500 transition-colors"
-                      >
-                        <Save size={14} /> Saqlash
-                      </button>
-                    </div>
-                  )}
+          <div className="p-5 sm:p-6">
+            {isEditing ? (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-y-5 gap-x-6">
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-gray-700 ml-1">Ism Familiya</label>
+                  <input 
+                    type="text" 
+                    className="w-full bg-gray-50 border-none focus:ring-2 focus:ring-green-500/50 rounded-xl px-4 py-3 outline-none transition-all placeholder:text-gray-400"
+                    value={formData.fullName || ''}
+                    onChange={e => setFormData({...formData, fullName: e.target.value})}
+                    placeholder="Masalan: Aliyev Vali"
+                  />
                 </div>
-
-                {isEditing ? (
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="space-y-1.5">
-                      <label className="text-sm font-medium text-gray-700">Ism Familiya</label>
-                      <input 
-                        type="text" 
-                        className="w-full border rounded-xl px-4 py-3 focus:ring-2 focus:ring-green-500 outline-none transition-all"
-                        value={formData.fullName || ''}
-                        onChange={e => setFormData({...formData, fullName: e.target.value})}
-                        placeholder="Masalan: Aliyev Vali"
-                      />
-                    </div>
-                    <div className="space-y-1.5">
-                      <label className="text-sm font-medium text-gray-700">Telefon raqam</label>
-                      <input 
-                        type="text" 
-                        disabled
-                        className="w-full border-gray-200 bg-gray-50 text-gray-500 rounded-xl px-4 py-3 cursor-not-allowed"
-                        value={profile?.number || ''}
-                      />
-                    </div>
-                    <div className="space-y-1.5 md:col-span-2">
-                      <label className="text-sm font-medium text-gray-700">Manzil</label>
-                      <input 
-                        type="text" 
-                        className="w-full border rounded-xl px-4 py-3 focus:ring-2 focus:ring-green-500 outline-none transition-all"
-                        value={formData.address || ''}
-                        onChange={e => setFormData({...formData, address: e.target.value})}
-                        placeholder="Shahar, Tuman, Ko'cha..."
-                      />
-                    </div>
-                    <div className="space-y-1.5">
-                      <label className="text-sm font-medium text-gray-700">Tug&apos;ilgan sana</label>
-                      <input 
-                        type="date" 
-                        className="w-full border rounded-xl px-4 py-3 focus:ring-2 focus:ring-green-500 outline-none transition-all"
-                        value={formData.dateOfBirth ? formData.dateOfBirth.split('T')[0] : ''}
-                        onChange={e => setFormData({...formData, dateOfBirth: e.target.value ? new Date(e.target.value).toISOString() : null})}
-                      />
-                    </div>
-                    <div className="space-y-1.5">
-                      <label className="text-sm font-medium text-gray-700">Jinsi</label>
-                      <select 
-                        className="w-full border rounded-xl px-4 py-3 focus:ring-2 focus:ring-green-500 outline-none transition-all"
-                        value={formData.gender || ''}
-                        onChange={e => setFormData({...formData, gender: e.target.value})}
-                      >
-                        <option value="">Tanlang</option>
-                        <option value="MALE">Erkak</option>
-                        <option value="FEMALE">Ayol</option>
-                      </select>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    <div className="bg-gray-50 p-4 rounded-xl flex items-center gap-4">
-                      <div className="p-2.5 bg-blue-500/10 text-blue-500 rounded-lg"><UserCircle size={22} /></div>
-                      <div className="min-w-0 flex-1">
-                        <p className="text-xs font-medium mb-0.5 text-gray-500">Ism Familiya</p>
-                        <p className="font-semibold truncate text-gray-800">{profile?.fullName || "Kiritilmagan"}</p>
-                      </div>
-                    </div>
-                    <div className="bg-gray-50 p-4 rounded-xl flex items-center gap-4">
-                      <div className="p-2.5 bg-green-500/10 text-green-500 rounded-lg"><Phone size={22} /></div>
-                      <div className="min-w-0 flex-1">
-                        <p className="text-xs font-medium mb-0.5 text-gray-500">Telefon raqam</p>
-                        <p className="font-semibold truncate text-gray-800">{profile?.number}</p>
-                      </div>
-                    </div>
-                    <div className="bg-gray-50 p-4 rounded-xl flex items-center gap-4 sm:col-span-2">
-                      <div className="p-2.5 bg-red-500/10 text-red-500 rounded-lg"><MapPin size={22} /></div>
-                      <div className="min-w-0 flex-1">
-                        <p className="text-xs font-medium mb-0.5 text-gray-500">Manzil</p>
-                        <p className="font-semibold truncate text-gray-800">{profile?.address || "Kiritilmagan"}</p>
-                      </div>
-                    </div>
-                    <div className="bg-gray-50 p-4 rounded-xl flex items-center gap-4">
-                      <div className="p-2.5 bg-purple-500/10 text-purple-500 rounded-lg"><Calendar size={22} /></div>
-                      <div className="min-w-0 flex-1">
-                        <p className="text-xs font-medium mb-0.5 text-gray-500">Tug&apos;ilgan sana</p>
-                        <p className="font-semibold text-gray-800">
-                          {profile?.dateOfBirth ? new Date(profile.dateOfBirth).toLocaleDateString('uz-UZ') : "Kiritilmagan"}
-                        </p>
-                      </div>
-                    </div>
-                    <div className="bg-gray-50 p-4 rounded-xl flex items-center gap-4">
-                      <div className="p-2.5 bg-orange-500/10 text-orange-500 rounded-lg"><UserCircle size={22} /></div>
-                      <div className="min-w-0 flex-1">
-                        <p className="text-xs font-medium mb-0.5 text-gray-500">Jinsi</p>
-                        <p className="font-semibold text-gray-800">
-                          {profile?.gender === 'MALE' ? 'Erkak' : profile?.gender === 'FEMALE' ? 'Ayol' : "Kiritilmagan"}
-                        </p>
-                      </div>
-                    </div>
-                    <div className={`p-4 rounded-xl flex items-center gap-4 ${profile?.userId ? 'bg-blue-50' : 'bg-gray-50'}`}>
-                      <div className={`p-2.5 rounded-lg ${profile?.userId ? 'bg-blue-500/20 text-blue-500' : 'bg-gray-200 text-gray-400'}`}>
-                        <MessageCircle size={22} />
-                      </div>
-                      <div className="min-w-0 flex-1">
-                        <p className="text-xs font-medium mb-0.5 text-gray-500">Telegram</p>
-                        <p className={`font-semibold ${profile?.userId ? 'text-blue-600' : 'text-gray-500'}`}>
-                          {profile?.userId 
-                            ? (profile.username ? `@${profile.username}` : 'Ulangan') 
-                            : "Ulanmagan"}
-                        </p>
-                      </div>
-                      {profile?.userId && (
-                        <CheckCircle size={18} className="text-green-500" />
-                      )}
-                    </div>
-                  </div>
-                )}
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-gray-700 ml-1">Tug'ilgan sana</label>
+                  <input 
+                    type="date" 
+                    className="w-full bg-gray-50 border-none focus:ring-2 focus:ring-green-500/50 rounded-xl px-4 py-3 outline-none transition-all text-gray-700"
+                    value={formData.dateOfBirth ? formData.dateOfBirth.split('T')[0] : ''}
+                    onChange={e => setFormData({...formData, dateOfBirth: e.target.value ? new Date(e.target.value).toISOString() : null})}
+                  />
+                </div>
+                <div className="space-y-2 sm:col-span-2">
+                  <label className="text-sm font-medium text-gray-700 ml-1">Manzil</label>
+                  <input 
+                    type="text" 
+                    className="w-full bg-gray-50 border-none focus:ring-2 focus:ring-green-500/50 rounded-xl px-4 py-3 outline-none transition-all placeholder:text-gray-400"
+                    value={formData.address || ''}
+                    onChange={e => setFormData({...formData, address: e.target.value})}
+                    placeholder="Shahar, tuman, mahalla..."
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-gray-700 ml-1">Jinsi</label>
+                  <select 
+                    className="w-full bg-gray-50 border-none focus:ring-2 focus:ring-green-500/50 rounded-xl px-4 py-3 outline-none transition-all text-gray-700 appearance-none"
+                    value={formData.gender || ''}
+                    onChange={e => setFormData({...formData, gender: e.target.value})}
+                  >
+                    <option value="">Tanlang</option>
+                    <option value="MALE">Erkak</option>
+                    <option value="FEMALE">Ayol</option>
+                  </select>
+                </div>
               </div>
-            )}
-
-            {/* TAB: SETTINGS */}
-            {activeTab === 'settings' && (
-              <div className="bg-white border border-gray-100 rounded-2xl shadow-sm p-5 sm:p-6 min-h-[400px]">
-                <div className="pb-4 mb-5 border-b border-gray-100">
-                  <h3 className="text-xl font-bold text-gray-800">Sozlamalar</h3>
-                  <p className="text-sm mt-1 text-gray-500">Sayt tilini o&apos;zgartirish</p>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="p-3 border border-gray-50 bg-gray-50/50 rounded-2xl flex items-center gap-3">
+                  <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center text-gray-400 shadow-sm"><UserCircle size={18} /></div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider mb-0.5">To'liq ism</p>
+                    <p className="font-medium text-gray-900 truncate">{profile?.fullName || "Kiritilmagan"}</p>
+                  </div>
                 </div>
-
-                <div className="space-y-4">
-                  <div className="bg-gray-50 border border-gray-100 rounded-xl p-5">
-                    <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-                      <div className="flex gap-3">
-                        <div className="p-2.5 rounded-lg bg-blue-500/10 text-blue-500 h-fit">
-                          <Globe size={22} />
-                        </div>
-                        <div>
-                          <h4 className="font-bold mb-0.5 text-gray-800">Til</h4>
-                          <p className="text-xs text-gray-500">Interfeys tili</p>
-                        </div>
-                      </div>
-                      
-                      <div className="flex flex-wrap gap-2 w-full sm:w-auto">
-                        <button 
-                          onClick={() => handleUpdate({ lang: 'UZ' }, false)}
-                          className={`flex-1 sm:flex-none px-3 py-2 rounded-lg text-sm font-medium transition-all ${profile?.lang === 'UZ' ? 'bg-green-600 text-white' : 'bg-white text-gray-700 border hover:bg-gray-50'}`}
-                        >
-                          🇺🇿 O&apos;zbek
-                        </button>
-                        <button 
-                          onClick={() => handleUpdate({ lang: 'RU' }, false)}
-                          className={`flex-1 sm:flex-none px-3 py-2 rounded-lg text-sm font-medium transition-all ${profile?.lang === 'RU' ? 'bg-green-600 text-white' : 'bg-white text-gray-700 border hover:bg-gray-50'}`}
-                        >
-                          🇷🇺 Русский
-                        </button>
-                        <button 
-                          onClick={() => handleUpdate({ lang: 'EN' }, false)}
-                          className={`flex-1 sm:flex-none px-3 py-2 rounded-lg text-sm font-medium transition-all ${profile?.lang === 'EN' ? 'bg-green-600 text-white' : 'bg-white text-gray-700 border hover:bg-gray-50'}`}
-                        >
-                          🇬🇧 English
-                        </button>
-                      </div>
-                    </div>
+                <div className="p-3 border border-gray-50 bg-gray-50/50 rounded-2xl flex items-center gap-3">
+                  <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center text-gray-400 shadow-sm"><Calendar size={18} /></div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider mb-0.5">Tug'ilgan sana</p>
+                    <p className="font-medium text-gray-900">
+                      {profile?.dateOfBirth ? new Date(profile.dateOfBirth).toLocaleDateString('uz-UZ') : "Kiritilmagan"}
+                    </p>
+                  </div>
+                </div>
+                <div className="p-3 border border-gray-50 bg-gray-50/50 rounded-2xl flex items-center gap-3 sm:col-span-2">
+                  <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center text-gray-400 shadow-sm shrink-0"><MapPin size={18} /></div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider mb-0.5">Manzil</p>
+                    <p className="font-medium text-gray-900 truncate">{profile?.address || "Kiritilmagan"}</p>
+                  </div>
+                </div>
+                <div className="p-3 border border-gray-50 bg-gray-50/50 rounded-2xl flex items-center gap-3">
+                  <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center text-gray-400 shadow-sm"><UserCircle size={18} /></div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider mb-0.5">Jinsi</p>
+                    <p className="font-medium text-gray-900">
+                      {profile?.gender === 'MALE' ? 'Erkak' : profile?.gender === 'FEMALE' ? 'Ayol' : "Kiritilmagan"}
+                    </p>
                   </div>
                 </div>
               </div>
             )}
           </div>
         </div>
+
+        {/* Logout */}
+        <div className="pt-4 flex justify-center">
+          <button 
+            onClick={handleLogout}
+            className="flex items-center gap-2 px-6 py-3 text-red-500 font-medium bg-red-50 hover:bg-red-100 rounded-2xl transition-colors"
+          >
+            <LogOut size={18} />
+            Akkauntdan chiqish
+          </button>
+        </div>
+
       </div>
     </div>
   );

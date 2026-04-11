@@ -130,12 +130,12 @@ export default function SelectedPage() {
   };
 
   const getImageUrl = (photos: string[]) => {
-    if (photos && photos.length > 0) {
+    if (photos && Array.isArray(photos) && photos.length > 0) {
       const photo = photos[0];
       if (photo.startsWith('http')) return photo;
-      return `${API_BASE_URL}/${photo}`;
+      return `${API_BASE_URL}${photo.startsWith('/') ? '' : '/'}${photo}`;
     }
-    return '/placeholder.png';
+    return '/placeholder.png'; // Agar rasm topilmasa placeholder
   };
 
   if (loading) {
@@ -148,6 +148,9 @@ export default function SelectedPage() {
       </div>
     );
   }
+
+  // To'g'ridan to'g'ri return o'rniga contentni chiqarish
+  let content = null;
 
   return (
     <div className="min-h-screen bg-gray-50 pb-8">
@@ -199,11 +202,12 @@ export default function SelectedPage() {
                 className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden hover:shadow-md transition-shadow"
               >
                 <Link href={`/${item.product.productId}`}>
-                  <div className="relative aspect-square bg-gray-50">
+                  <div className="relative w-full overflow-hidden bg-gray-50" style={{ paddingBottom: "100%" }}>
                     <img 
                       src={getImageUrl(item.product.photos)} 
                       alt={item.product.name}
-                      className="w-full h-full object-cover"
+                      loading="lazy"
+                      className="absolute inset-0 w-full h-full object-cover transition-transform duration-300 hover:scale-105"
                     />
                     <span className="absolute top-2 left-2 bg-white/90 backdrop-blur-sm text-xs font-medium text-gray-600 px-2 py-1 rounded-lg">
                       {item.product.category}

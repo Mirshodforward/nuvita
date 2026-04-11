@@ -124,16 +124,13 @@ function RegisterForm() {
       if (isTelegramMiniApp()) {
         const webApp = getTelegramWebApp();
         webApp?.HapticFeedback?.notificationOccurred("success");
-        
-        setTimeout(() => {
-          router.push("/");
-        }, 2000);
-      } else {
-        // Regular web - redirect to profile
-        setTimeout(() => {
-          router.push("/profile");
-        }, 1500);
       }
+      
+      // Force reload to home page for both web and mini app
+      setTimeout(() => {
+        window.location.href = "/";
+      }, 1500);
+
     } catch (err: any) {
       console.error(err);
       if (err.response?.status === 409) {
